@@ -1,0 +1,25 @@
+Keeping this just in case
+No hardware encoder, can't use
+
+This just for webcam used for testing
+Pipeline for h264 test webcam - this webcam doesn't need encoding as outputs h264 automatically
+"( v4l2src device=/dev/video2 ! video/x-h264, width=640, height=480, framerate=30/1 ! h264parse ! rtph264pay name=pay0 pt=96 )"
+Modified test webcam pipeline for low latency
+tune=zerolatency speed-preset=ultrafast - these properties only for cpu encoder
+"( v4l2src device=/dev/video2 is-live=true ! video/x-h264, width=640, height=480, framerate=30/1 ! h264parse ! rtph264pay name=pay0 pt=96 )"
+
+If these dont work try taking out iframeinterval, insert-sps-pps, and change back to h264
+even take out the part specifying memory:NVMM to just have nvvidconv
+Line for actual camera - actual cameras send raw data, need encoding
+mjpeg - more cpu, more latency, less bandwidth
+Also try reducing bitrate since 480p, 8 mil for 1080p
+"( v4l2src device=/dev/video2 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
+    jpegdec ! nvvidconv ! 'video/x-raw(memory:NVMM),format=NV12,width=640,height=480,framerate=30/1' ! \
+    nvv4l2h265enc bitrate=8000000 iframeinterval=15 insert-sps-pps=true ! h265parse ! \
+    rtph265pay name=pay0 pt=96 config-interval=1 )"
+
+Something is wrong with this code - no hardware encoding
+yuy - less cpu, less latency, higher bandwidth
+"( v4l2src device=/dev/video0 is-live=true ! video/x-raw,format=YUY2,width=640,height=480,framerate=30/1 ! \
+    nvvidconv ! video/x-raw(memory:NVMM),format=NV12,width=640,height=480,framerate=30/1 ! nvv4l2h265enc bitrate=8000000 \
+    iframeinterval=15 insert-sps-pps=true ! h265parse ! rtph265pay name=pay0 pt=96 config-interval=1 )"
