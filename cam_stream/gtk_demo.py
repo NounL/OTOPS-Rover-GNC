@@ -32,6 +32,7 @@ class Window(Gtk.Window):
 
     def on_realize(self, widget):
         Gst.init(None)
+        # Should be changed later as testing jpeg instead of h264
         pipeline = Gst.parse_launch("rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink")
         gtksink = pipeline.get_by_name("sink")
         widgetSink = gtksink.props.widget
