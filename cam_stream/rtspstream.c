@@ -37,6 +37,7 @@ void gst_rtsp_server_run(int port)
 
     // Try a mjpeg pipeline for better cpu
     char *pipeline_descs[NUM_CAMERAS] = {
+        // Test line
         // speed-preset may reduce quality
         "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
 		
