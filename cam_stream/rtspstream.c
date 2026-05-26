@@ -24,6 +24,9 @@
 // Could move queue earlier like before rtpjpegdepay if there are issues
 // gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
 
+// Line to connect to rover off of groundstation
+// gst-launch-1.0 rtspsrc location=rtsp://192.168.0.3:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+
 #include <stdio.h>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
