@@ -6,11 +6,16 @@
 // gcc teststream.c $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0)
 // ./a.out
 
+// To rename
+// gcc teststream.c -o teststream ...
+
+// gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+
 #include <stdio.h>
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
 
-#define NUM_CAMERAS 3
+#define NUM_CAMERAS 1
 
 void gst_rtsp_server_run(int port)
 {
@@ -23,9 +28,10 @@ void gst_rtsp_server_run(int port)
 
     char *pipeline_descs[NUM_CAMERAS] = {
         // To test multi-stream just copy and paste this however many times and change NUM_CAMERAS
-        "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
-        "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
-        "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )"
+        "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )"
+        // "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
+        // "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
+        // "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )"
     };
 
     gst_init(NULL, NULL);
