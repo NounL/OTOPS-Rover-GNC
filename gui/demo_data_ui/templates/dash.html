@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rover Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <div class="box-top-left">
+            <h1>Animated Visual Feedback</h1>
+        </div>
+
+        <div class="box-top-right">
+            <h1>Motor Data Feedback</h1>
+            <p>Motor 1: </p>
+            <p>Motor 2: </p>
+            <p>Motor 3: </p>
+            <p>Motor 4: </p>
+        </div>
+
+        <div class="box-mid">
+            <h1>Event Log</h1>
+            <p>placeholder text</p>
+        </div>
+
+        <div class="box-bottom-left">
+            <h1>Verbose Data Log</h1>
+            <p>placeholder text</p>
+        </div>
+
+        <div class="box-bottom-right">
+            <h1>Sensor Data Feedback</h1>
+            <p>GPS: Longitude: Latitude: </p>
+            <p>IMU: X: Y: Z: </p>
+            <p>Air Sensors: 1: 2: 3: ..9:</p>
+            <p>Soil Moisture:</p>
+        </div>
+
+    </div>
+
+</body>
