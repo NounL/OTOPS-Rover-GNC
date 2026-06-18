@@ -24,7 +24,7 @@ print(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
 # in filename
 num = 0
 
-save_interval = 3
+save_interval = 7
 prev_time = time.time()
 
 while cap.isOpened():

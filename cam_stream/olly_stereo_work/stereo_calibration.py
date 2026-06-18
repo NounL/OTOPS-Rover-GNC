@@ -1,3 +1,8 @@
+# Camera Calibrator
+# When you have calibration images generated and stored, run this to calibrate
+# https://www.youtube.com/watch?v=yKypaVl6qQo&list=PLCpB2LmtGbuel31gdKHSV_HBaZa2guc6Y&index=5 
+# https://github.com/niconielsen32/ComputerVision/blob/master/stereoVisionCalibration/stereovision_calibration.py
+
 import numpy as np
 import cv2 as cv
 import glob
@@ -25,7 +30,7 @@ objp[:,:2] = np.mgrid[0:chessboardSize[0], 0:chessboardSize[1]].T.reshape(-1,2)
 
 # Each square on calibration sheet 21 mm long measured w ruler, scaling 
 # for real world
-objp = objp * 21
+objp = objp * 22
 print(objp)
 
 # Store object points and img points from all images
@@ -35,9 +40,9 @@ objpoints = []
 imgpointsL = []
 imgpointsR = []
 
-# gets all png files in current folder as list of filenames - images of our checkerboard for calibrating
-imagesLeft = glob.glob('olly_stereo_work/images/stereoLeft/*.png')
-imagesRight = glob.glob('olly_stereo_work/images/stereoRight/*.png')
+# gets all png files in folder as list of filenames - images of our checkerboard for calibrating
+imagesLeft = sorted(glob.glob('olly_stereo_work/images/stereoLeft/*.png'))
+imagesRight = sorted(glob.glob('olly_stereo_work/images/stereoRight/*.png'))
 
 # going through 2 lists at once, pairing elements together
 for imgLeft, imgRight in zip(imagesLeft, imagesRight):
@@ -47,11 +52,11 @@ for imgLeft, imgRight in zip(imagesLeft, imagesRight):
     grayL = cv.cvtColor(imgL, cv.COLOR_BGR2GRAY)
     grayR = cv.cvtColor(imgR, cv.COLOR_BGR2GRAY)
 
-    # Find chessboard corners
+    # Troubles with chessboard corners not being recognized
     retL, cornersL = cv.findChessboardCorners(grayL, chessboardSize, None)
     retR, cornersR = cv.findChessboardCorners(grayR, chessboardSize, None)
 
-    if retL and retR == True:
+    if retL and retR:
         objpoints.append(objp)
 
         # refining locations of corners to subpixel accuracy, 11 by 11 and -1 by -1 being
@@ -87,19 +92,23 @@ flags |= cv.CALIB_FIX_INTRINSIC
 # intrinsic parameters = inside the camera, focal length, sensor size...
 
 criteria_stereo = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-# This part was cut off in the video so may cause errors
-retStereo, newCameraMatrixL, distL, newCameraMatrixR, distR, rot, trans, essentialMatrix, fundamentalMatrix = \
-    cv.stereoCalibrate(
-        objpoints,
-        imgpointsL,
-        imgpointsR,
-        cameraMatrixL,
-        distL,
-        cameraMatrixR,
-        distR,
-        frameSize,
-        criteria=criteria_stereo,
-        flags=flags
-    )
 
-# at 19 in the video
+# This step is performed to transformation between the two cameras and calculate Essential and Fundamenatl matrix
+retStereo, newCameraMatrixL, distL, newCameraMatrixR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(objpoints, imgpointsL, imgpointsR, newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1], criteria_stereo, flags)
+
+########## Stereo Rectification #################################################
+rectifyScale = 1
+rectL, rectR, projMatrixL, projMatrixR, Q, roi_L, roi_R= cv.stereoRectify(newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1], rot, trans, rectifyScale,(0,0))
+
+stereoMapL = cv.initUndistortRectifyMap(newCameraMatrixL, distL, rectL, projMatrixL, grayL.shape[::-1], cv.CV_16SC2)
+stereoMapR = cv.initUndistortRectifyMap(newCameraMatrixR, distR, rectR, projMatrixR, grayR.shape[::-1], cv.CV_16SC2)
+
+print("Saving parameters!")
+cv_file = cv.FileStorage('olly_stereo_work/stereoMap.xml', cv.FILE_STORAGE_WRITE)
+
+cv_file.write('stereoMapL_x',stereoMapL[0])
+cv_file.write('stereoMapL_y',stereoMapL[1])
+cv_file.write('stereoMapR_x',stereoMapR[0])
+cv_file.write('stereoMapR_y',stereoMapR[1])
+
+cv_file.release()
