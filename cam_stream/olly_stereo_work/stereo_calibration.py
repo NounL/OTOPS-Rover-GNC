@@ -97,6 +97,7 @@ criteria_stereo = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 retStereo, newCameraMatrixL, distL, newCameraMatrixR, distR, rot, trans, essentialMatrix, fundamentalMatrix = cv.stereoCalibrate(objpoints, imgpointsL, imgpointsR, newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1], criteria_stereo, flags)
 
 ########## Stereo Rectification #################################################
+# copilot said rectifyScale = 0 better?
 rectifyScale = 1
 rectL, rectR, projMatrixL, projMatrixR, Q, roi_L, roi_R= cv.stereoRectify(newCameraMatrixL, distL, newCameraMatrixR, distR, grayL.shape[::-1], rot, trans, rectifyScale,(0,0))
 
@@ -110,5 +111,19 @@ cv_file.write('stereoMapL_x',stereoMapL[0])
 cv_file.write('stereoMapL_y',stereoMapL[1])
 cv_file.write('stereoMapR_x',stereoMapR[0])
 cv_file.write('stereoMapR_y',stereoMapR[1])
+cv_file.write('Q', Q)
 
 cv_file.release()
+
+print("projMatrixL\n")
+print(projMatrixL)
+
+print("---------\n")
+
+print("projMatrixR\n")
+print(projMatrixR)
+
+print("---------\n")
+
+print("Q\n")
+print(Q)

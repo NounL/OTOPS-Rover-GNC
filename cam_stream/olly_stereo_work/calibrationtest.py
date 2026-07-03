@@ -21,6 +21,14 @@ import cv2 as cv
 # cv.destroyAllWindows()
 
 cap = cv.VideoCapture(1, cv.CAP_DSHOW)
+
+# Tests ports for camera
+# for i in range(10):
+#     cap = cv.VideoCapture(i, cv.CAP_ANY)
+#     if cap.isOpened():
+#         print("Camera at index", i)
+#         cap.release()
+
 cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*"MJPG"))
 cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
@@ -34,9 +42,9 @@ while cap.isOpened():
     h, w, _ = img.shape
     mid = w // 2
     
+    # Test orientation then recalibrate
     left = img[:, mid:]
     right  = img[:, :mid]
-    
     
     cv.imshow("Left", left)
     cv.imshow("Right", right)

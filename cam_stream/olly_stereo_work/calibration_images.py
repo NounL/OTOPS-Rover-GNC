@@ -33,6 +33,10 @@ while cap.isOpened():
     h, w, _ = img.shape
     mid = w // 2
 
+    # BIG MISTAKE, MY LEFT IS NOT THE CAMERAS LEFT, ITS MIRRORED TO ME
+    # NEED TO RECALIBRATE AND FIX THIS
+    # Check before "fixing" to make sure
+    # Then need to change everywhere accordingly
     left = img[:, mid:]
     right  = img[:, :mid]
 

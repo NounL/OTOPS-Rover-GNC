@@ -1,6 +1,8 @@
+# This applies results from calibration, undistort and rectification visualizing this
+# this not important but applying some of the code in here to a depth map is
+
 import numpy as np
 import cv2 as cv
-
 
 # Camera parameters to undistort and rectify images
 cv_file = cv.FileStorage()
