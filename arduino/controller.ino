@@ -6,6 +6,16 @@
 Note from Nouwen Laroche:
 consider making all the serial communication use JSON.
 Will be more consisent and universal for further development.
+
+#####################################################################
+TODO:
+
+- poll the multiple gas sensors. currently only accounts for one
+- format serial communication to JSON
+- test GPS serial read format -- will use TinyGPSPlus.h Jul 07 2026 ,Nouwen
+- test BMP sensor
+- add MPU?
+
 */
 
 #include <Wire.h>
