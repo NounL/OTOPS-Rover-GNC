@@ -10,6 +10,9 @@
 // gcc latest-rtspstream.c $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0)
 // ./a.out
 
+// Rename
+// gcc latest-rtspstream.c -o teststream ...
+
 // Monitor usb with lsusb -tv
 
 // sync=false here may cause to much cpu usage
@@ -26,6 +29,10 @@
 // gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/back latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
 // gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
 // gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+
+// Line for webcam
+// gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! ximagesink
+
 
 #include <stdio.h>
 #include <gst/gst.h>
@@ -65,16 +72,20 @@ void gst_rtsp_server_run(int port)
         //  "( v4l2src device=/dev/video4 is-live=true ! video/x-raw, width=640, height=480, framerate=30/1 ! \
         //    videoconvert ! x264enc bitrate=100 tune=zerolatency speed-preset=ultrafast iframeinterval=15 insert-sps-pps=true ! \
         //    h264parse ! rtph264pay name=pay0 pt=96 config-interval=1 )",
+        
+        
+		// Testing Mjpeg
+		"( v4l2src device=/dev/video0 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
+		   jpegparse ! rtpjpegpay name=pay0 pt=26 config-interval=1 )",
+		
+		"( v4l2src device=/dev/video2 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
+		   jpegparse ! rtpjpegpay name=pay0 pt=26 config-interval=1 )",
+		   
+		"( v4l2src device=/dev/video4 is-live=true ! video/x-h264, width=640, height=480, framerate=30/1 ! h264parse ! rtph264pay name=pay0 pt=96 config-interval=1 )",
 
-        // Testing Mjpeg
-			"( v4l2src device=/dev/video0 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
-               jpegparse ! rtpjpegpay name=pay0 pt=26 config-interval=1 )",
-            
-            "( v4l2src device=/dev/video2 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
-               jpegparse ! rtpjpegpay name=pay0 pt=26 config-interval=1 )",
-               
-            "( v4l2src device=/dev/video4 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
-               jpegparse ! rtpjpegpay name=pay0 pt=26 config-interval=1 )",
+		   
+		//"( v4l2src device=/dev/video4 is-live=true ! image/jpeg, width=640, height=480, framerate=30/1 ! \
+		//   jpegparse ! rtpjpegpay name=pay0 pt=26 config-interval=1 )",
     };
 
     gst_init(NULL, NULL);
