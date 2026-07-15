@@ -12,7 +12,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
-from cam_grid import CamGrid
+from olly_cam_grid import CamGrid
 
 # gi.require_version("Gst", "1.0")
 # from gi.repository import Gst
