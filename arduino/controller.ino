@@ -13,6 +13,7 @@ TODO:
 - poll the multiple gas sensors. currently only accounts for one
 - format serial communication to JSON
 - test GPS serial read format -- will use TinyGPSPlus.h Jul 07 2026 ,Nouwen
+		Jul 17 2026: GPS sends data but does not recieve location lock.
 - test BMP sensor
 - add MPU?
 
