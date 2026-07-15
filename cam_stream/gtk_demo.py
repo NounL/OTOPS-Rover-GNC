@@ -130,7 +130,7 @@ class Window(Gtk.Window):
         # print("pipeline =", self.pipeline)
         # self.pipeline.set_state(Gst.State.PLAYING)
         #self.pipeline = Gst.parse_launch("rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink")
-        self.pipeline = Gst.parse_launch("rtspsrc location=rtsp://10.160.22.170:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink")
+        self.pipeline = Gst.parse_launch("rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink")
         gtksink = self.pipeline.get_by_name("sink")
         self.widgetSink = gtksink.props.widget
         self.widgetSink.show()

@@ -12,7 +12,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
-from olly_cam_grid import CamGrid
+from cam_grid import CamGrid
 
 # gi.require_version("Gst", "1.0")
 # from gi.repository import Gst
@@ -42,15 +42,23 @@ class MainWindow(Gtk.Window):
         root_grid.set_row_spacing(20)
         root_grid.set_column_spacing(100)
 
+        # Issue - when adding a 4th to 3 cams working fine, it permanently slows down everything til
+        # app closed and reopened
+        # Also, do want to add user interaction to control camera quality, ie have max values,
+        # but user can lower to account for network?
+
+        # 600 by 800 webcam h264 a bit of delay, tolerable?
+
         # Gstreamer pipelines - Need to be modified for real jetson stream - also tcp/udp issue
         # tryinng to get udp, need to allow udp port through firewall
         # Jetson ip: 10.160.22.170
         # 3 innomakers - mjpeg
-        front_line = "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
-        back_line = "rtspsrc location=rtsp://localhost:8554/back protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2"
-        left_line = "rtspsrc location=rtsp://localhost:8554/left protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3"
-        # webcam - h.264
-        right_line = "rtspsrc location=rtsp://localhost:8554/right protocols=tcp latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink4"
+        # front_line = "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
+        #front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
+        front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
+        back_line = "rtspsrc location=rtsp://192.168.0.2:8554/back latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2"
+        left_line = "rtspsrc location=rtsp://192.168.0.2:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3"
+        right_line = "rtspsrc location=rtsp://192.168.0.2:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink4"
 
         # Pass in gst pipeline
         front_cam_grid = CamGrid("Front", front_line, "sink")
