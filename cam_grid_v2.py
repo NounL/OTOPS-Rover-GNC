@@ -12,7 +12,7 @@ from gi.repository import Gst
 # Consists of a main outer grid (Placeholder/stream, inner grid)
 # inner grid is a small menu for button placement
 class BaseCamGrid(Gtk.Grid):
-    def __init__(self, placement, pipeline_str, sink, screen_dim, on_colrow, off_colrow, inner_colrow):
+    def __init__(self, placement, pipeline_str, sink, screen_dim):
         # Maybe inheritance somewhere as this same as old CamGrid so far
         Gst.init(None)
         Gtk.Grid.__init__(self)
@@ -26,12 +26,12 @@ class BaseCamGrid(Gtk.Grid):
         # Main grid everythings added to
         self.main_cam_grid = Gtk.Grid()
         self.add(self.main_cam_grid)
-        self.main_cam_grid.set_row_spacing(5)
-        self.main_cam_grid.set_column_spacing(5)
+        self.main_cam_grid.set_row_spacing(2)
+        self.main_cam_grid.set_column_spacing(2)
         # Inner grid for on/off buttons and camera label 
         self.inner_cam_grid = Gtk.Grid()
-        self.inner_cam_grid.set_row_spacing(5)
-        self.inner_cam_grid.set_column_spacing(5)
+        self.inner_cam_grid.set_row_spacing(2)
+        self.inner_cam_grid.set_column_spacing(2)
 
         self.placeholder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.placeholder.set_size_request(self.width, self.height)
@@ -57,49 +57,31 @@ class BaseCamGrid(Gtk.Grid):
         self.on_btn.connect("clicked", self.on_btn_click)
         self.off_btn.connect("clicked", self.off_btn_click)
 
-        # Heres where it varies - for large grid want large screen spanning 
-        # 3 columns in 0th row, then inner grid in row 1, each label, button 1 width 1 height
-        
-        # Big grid code - putting here to figure out pass in
-        # self.inner_cam_grid.attach(self.cam_lbl,0,0,1,1)
-        # # col 1, row 1, 1 by 1
-        # self.inner_cam_grid.attach(self.on_btn,1,0,1,1)
-        # self.inner_cam_grid.attach(self.off_btn,2,0,1,1)
-        # # Can tweak column span to see fit
-        # self.outer_cam_grid.attach(self.placeholder,0,0,1,1)
-        # self.outer_cam_grid.attach(self.inner_cam_grid,0,1,1,1)
-
-        # For small grid want small screen spanning
-        # spans 0th column (only 1 col i think), 3 rows, 
-        # inner grid in col 2 with label, on, off, (and extra switch button) 1 by 1
-
-        # Small grid code - putting here to figure out pass in - child class extends adding extra button
-        # self.inner_cam_grid.attach(self.cam_lbl,0,0,1,1)
-        # # col 1, row 1, 1 by 1
-        # self.inner_cam_grid.attach(self.on_btn,0,1,1,1)
-        # self.inner_cam_grid.attach(self.off_btn,0,2,1,1)
-        # # Can tweak column span to see fit
-        # self.outer_cam_grid.attach(self.placeholder,0,0,1,1)
-        # self.outer_cam_grid.attach(self.inner_cam_grid,1,0,1,1)
-
-        # Can pass in 3 arrays
-        # on_colrow (ie [1,0] vs [0,1]), off_colrow, inner_colrow
-        # final that should work for both 
         self.inner_cam_grid.attach(self.cam_lbl,0,0,1,1)
-        # col 1, row 1, 1 by 1
-        self.inner_cam_grid.attach(self.on_btn,on_colrow[0],on_colrow[1],1,1)
-        self.inner_cam_grid.attach(self.off_btn,off_colrow[0],off_colrow[1],1,1)
-        # Can tweak column span to see fit
+        self.inner_cam_grid.attach(self.on_btn,1,0,1,1)
+        self.inner_cam_grid.attach(self.off_btn,2,0,1,1)
+        self._build_swap()
         self.main_cam_grid.attach(self.placeholder,0,0,1,1)
-        self.main_cam_grid.attach(self.inner_cam_grid,inner_colrow[0],inner_colrow[1],1,1)
+        self.main_cam_grid.attach(self.inner_cam_grid,0,1,1,1)
 
-    def on_btn_click(self, widget):
+    def stream_on(self):
         if not self.pipeline:
             self.pipeline = Gst.parse_launch(self.pipeline_str)
             gtksink = self.pipeline.get_by_name(self.sink)
             self.widgetSink = gtksink.props.widget
             # same size as placeholder
             self.widgetSink.set_size_request(self.width,self.height)
+
+            # Trying to stop widget from expanding larger then the placeholder
+            # issue, i want the front main stream to expand, i want the small ones to shrink
+            # look into scaling inside the pipeline, but then theres the issue with switching
+            # and wanting to be large for the box
+            # want to figure out switch and inheritance then look at forcing certain size
+            # only want to force size on the 640 by 360 to make them even smaller to fit the boxes, 
+            # when switching want to force the main large sink to be smaller, (maybe just cuz i start and stop, i pass
+            # in different gst line that requests size, and do everything in the gst line requesting size
+            self.widgetSink.set_hexpand(False)
+            self.widgetSink.set_vexpand(False)
 
             # Replacing empty placeholder with camera stream
             self.main_cam_grid.remove(self.placeholder)
@@ -109,7 +91,7 @@ class BaseCamGrid(Gtk.Grid):
         else:
             print("ERROR: Stream already connected.")
 
-    def off_btn_click(self, widget):
+    def stream_off(self):
         if self.pipeline:
             self.pipeline.set_state(Gst.State.NULL)
             self.pipeline = None
@@ -119,5 +101,42 @@ class BaseCamGrid(Gtk.Grid):
             self.placeholder.show()
         else:
             print("ERROR: Stream already disconnected.")
+
+    def on_btn_click(self, widget):
+        self.stream_on()
+
+    def off_btn_click(self, widget):
+        self.stream_off()
+        
+    # Overwritten by small cam child - basecam does nothing with this
+    def _build_swap(self):
+        pass
+
+class SmallCamGrid(BaseCamGrid):
+    # def __init__(self, placement, pipeline_str, sink, screen_dim, swap_func):
+    #     super().__init__(placement, pipeline_str, sink, screen_dim)
+        
+    #     # Passing in swap function - accessing seperate cams in main
+    #     self.swap_func = swap_func
+
+
+    # adding extra focus feature to put small cam stream as main
+    def _build_swap(self):
+        self.swap_btn = Gtk.Button(label="Swap")
+        self.swap_btn.connect("clicked", self.swap_btn_click)
+        self.inner_cam_grid.attach(self.swap_btn,3,0,1,1)
+
+
+    # later worry about multiple swaps and feeds getting mixed up - reset button?
+    # pass in the pipelines I want to swap
+    def swap_btn_click(self, widget):
+        # Want to turn off this camera stream, turn off the front camera stream
+        # turn this camera on in the front stream
+        # turn front cam on in this stream
+
+        # modify off button to call an off function - to call that off function here
+        # Turns off small swapping camera
+        #self.swap_func(self)
+        pass
         
         

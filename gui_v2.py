@@ -12,7 +12,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
-from cam_grid_v2 import BaseCamGrid
+from cam_grid_v2 import BaseCamGrid, SmallCamGrid
 
 # gi.require_version("Gst", "1.0")
 # from gi.repository import Gst
@@ -23,13 +23,8 @@ class MainWindow(Gtk.Window):
     def __init__(self):
         # Super classes constructor
         Gtk.Window.__init__(self, title="Ares' Amazing Cameras")
-        # May tailor this to the size of main groundstation laptop
-        # Width by height
-        # Width can easily handle large stream and small stream (need 1280 at most)
-        # need 1920 width to double width of large stream for very large view (640*2 then the small stream width)
-        # Large placeholder will be 1280 by 720
-        # height can handle 3 stacked 360p streams (thats 1080)
-        self.set_default_size(1935,1100)
+        # May need to adjust this a tiny bit to fit main groundstation laptop if its smaller
+        self.set_default_size(1900,1080)
         # Dark gray background
         self.override_background_color(
             Gtk.StateFlags.NORMAL,
@@ -43,8 +38,8 @@ class MainWindow(Gtk.Window):
         # Allign in the center and padding between items
         root_grid.set_halign(Gtk.Align.CENTER)
         root_grid.set_valign(Gtk.Align.CENTER)
-        root_grid.set_row_spacing(10)
-        root_grid.set_column_spacing(10)
+        root_grid.set_row_spacing(2)
+        root_grid.set_column_spacing(2)
 
         # Issue - when adding a 4th to 3 cams working fine, it permanently slows down everything til
         # app closed and reopened
@@ -59,25 +54,51 @@ class MainWindow(Gtk.Window):
         # 3 innomakers - mjpeg
         # front_line = "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
         #front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
-        front_line = "rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
-        back_line = "rtspsrc location=rtsp://localhost:8554/back latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2"
-        left_line = "rtspsrc location=rtsp://localhost:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3"
-        right_line = "rtspsrc location=rtsp://localhost:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink4"
+        
+        # Tomorrow testing decoding to fit smaller streams
+        front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
+        left_line = "rtspsrc location=rtsp://192.168.0.2:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3"
+        right_line = "rtspsrc location=rtsp://192.168.0.2:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink4"
+        back_line = "rtspsrc location=rtsp://192.168.0.2:8554/back latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2"
+
+        # Test line for resizing - may not work - resizing main stream to fit small window - test after gtksink properties test
+        #front_test = "rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! video/x-raw, width=480, height=270 ! gtksink name=sink"
+
+        # width by height
+        # Need to maintain 4:3 ratio to not stretch, if enlarging enlarge both my same factor and check if 4:3
+        # so currently for 640 by 480, double is 1280 by 960 - try to make bit bigger
+        # 1920 by 1440 - way to large 
+        # to scale multiply each by the same factor
+        # 1280 * 1.1 = 1408
+        # 960 * 1.1 = 1056
+
+        # Small cams is 16:9 res
+        # For small cams, og is 640 by 360 
+        # divide by 2: 320 by 180 (will shrinking stream to fit even work???)
+        # 320 * 1.3 = 416, 320 * 1.5 = 480
+        # 180 * 1.3 = 234, 180 * 1.5 = 270
+        
+        # current problem, fixing size of cameras to be smaller so large cam can be big as possible
+        # need to account for set size (so large can become small) in switch function
 
         # After see this working switch to creating children with different dimensions to avoid this passing in
-        # Pass in gst pipeline
-        front_cam_grid = BaseCamGrid("Front", front_line, "sink", [1280,720], [1,0], [2,0], [0,1])
+        front_cam_grid = BaseCamGrid("Front", front_line, "sink", [1408,1056])
         # Switching these to be child extending base cam soon? Then don't need to pass in dim and add
         # functionality for switch button
-        left_cam_grid = BaseCamGrid("Left", left_line, "sink3", [640,360], [0,1], [0,2], [1,0])
-        right_cam_grid = BaseCamGrid("Right", right_line, "sink4", [640,360], [0,1], [0,2], [1,0])
-        back_cam_grid = BaseCamGrid("Back", back_line, "sink2", [640,360], [0,1], [0,2], [1,0])
+        left_cam_grid = SmallCamGrid("Left", left_line, "sink3", [480,270])
+        right_cam_grid = SmallCamGrid("Right", right_line, "sink4", [480,270])
+        back_cam_grid = SmallCamGrid("Back", back_line, "sink2", [480,270])
         
         # Col, Row, Width, Height
         root_grid.attach(front_cam_grid,0,0,1,3)
         root_grid.attach(left_cam_grid,1,0,1,1)
         root_grid.attach(right_cam_grid,1,1,1,1)
         root_grid.attach(back_cam_grid,1,2,1,1)
+
+    # Need swap logic to happen here as this where the cams are stored
+    #def swap(self, smallcam, maincam):
+
+        
 
 window = MainWindow()
 window.connect("delete-event", Gtk.main_quit)
