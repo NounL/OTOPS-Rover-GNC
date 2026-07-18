@@ -26,6 +26,7 @@ class Window(Gtk.Window):
         self.pipeline = None
         self.pipeline2 = None
         self.pipeline3 = None
+        self.pipeline4 = None
 
         self.connect("realize", self.on_realize)
 
@@ -86,6 +87,9 @@ class Window(Gtk.Window):
         btn5 = Gtk.Button(label="connect3")
         btn6 = Gtk.Button(label="disconnect3")
 
+        btn7 = Gtk.Button(label="connect4")
+        btn8 = Gtk.Button(label="disconnect4")
+
         # Button presses
         btn1.connect("clicked", self.on_btn1click)
         btn2.connect("clicked", self.on_btn2click)
@@ -96,12 +100,17 @@ class Window(Gtk.Window):
         btn5.connect("clicked", self.on_btn5click)
         btn6.connect("clicked", self.on_btn6click)
 
+        btn7.connect("clicked", self.on_btn7click)
+        btn8.connect("clicked", self.on_btn8click)
+
         self.vBox.add(btn1)
         self.vBox.add(btn2)
         self.vBox.add(btn3)
         self.vBox.add(btn4)
         self.vBox.add(btn5)
         self.vBox.add(btn6)
+        self.vBox.add(btn7)
+        self.vBox.add(btn8)
 
         btn1.show()
         btn2.show()
@@ -109,6 +118,8 @@ class Window(Gtk.Window):
         btn4.show()
         btn5.show()
         btn6.show()
+        btn7.show()
+        btn8.show()
 
     # Create pipelines in __init__
     # Attach widgets in on_realize
@@ -119,7 +130,7 @@ class Window(Gtk.Window):
         # print("pipeline =", self.pipeline)
         # self.pipeline.set_state(Gst.State.PLAYING)
         #self.pipeline = Gst.parse_launch("rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink")
-        self.pipeline = Gst.parse_launch("rtspsrc location=rtsp://192.168.0.3:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink")
+        self.pipeline = Gst.parse_launch("rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink")
         gtksink = self.pipeline.get_by_name("sink")
         self.widgetSink = gtksink.props.widget
         self.widgetSink.show()
@@ -134,7 +145,7 @@ class Window(Gtk.Window):
         self.widgetSink.hide()
 
     def on_btn3click(self, widget):
-        self.pipeline2 = Gst.parse_launch("rtspsrc location=rtsp://192.168.0.3:8554/back protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2")
+        self.pipeline2 = Gst.parse_launch("rtspsrc location=rtsp://10.160.22.170:8554/back protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2")
         gtksink2 = self.pipeline2.get_by_name("sink2")
         self.widgetSink2 = gtksink2.props.widget
         self.widgetSink2.show()
@@ -148,12 +159,10 @@ class Window(Gtk.Window):
         self.widgetSink2.hide()
 
     def on_btn5click(self, widget):
-        self.pipeline3 = Gst.parse_launch("rtspsrc location=rtsp://192.168.0.3:8554/left protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3")
-        
+        self.pipeline3 = Gst.parse_launch("rtspsrc location=rtsp://10.160.22.170:8554/left protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3")
         gtksink3 = self.pipeline3.get_by_name("sink3")
         self.widgetSink3 = gtksink3.props.widget
         self.widgetSink3.show()
-        #self.vBox.add(widgetSink)
         self.hBox.add(self.widgetSink3)
 
         self.pipeline3.set_state(Gst.State.PLAYING)
@@ -161,7 +170,27 @@ class Window(Gtk.Window):
     def on_btn6click(self, widget):
         self.pipeline3.set_state(Gst.State.NULL)
         self.pipeline3 = None
-        self.widgetSink.hide()
+        self.widgetSink3.hide()
+
+    # For h264 webcam
+    def on_btn7click(self, widget):
+        # Testing connecting webcam
+        # gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! ximagesink
+        self.pipeline4 = Gst.parse_launch("rtspsrc location=rtsp://10.160.22.170:8554/left protocols=tcp latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink4")
+        #self.pipeline3 = Gst.parse_launch("rtspsrc location=rtsp://10.160.22.170:8554/left protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3")
+        
+        gtksink4 = self.pipeline4.get_by_name("sink4")
+        self.widgetSink4 = gtksink4.props.widget
+        self.widgetSink4.show()
+        #self.vBox.add(widgetSink)
+        self.hBox.add(self.widgetSink4)
+
+        self.pipeline4.set_state(Gst.State.PLAYING)
+
+    def on_btn8click(self, widget):
+        self.pipeline4.set_state(Gst.State.NULL)
+        self.pipeline4 = None
+        self.widgetSink4.hide()
 
 myWindow = Window()
 myWindow.show_all()
