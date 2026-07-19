@@ -1,5 +1,7 @@
-# Custom Gtk grid widget 
-# Displays ...
+# Ares' Amazing Cameras (OTOPS 2026)
+# Olly Love
+# 2025/2026 Interface for controlling the OTOPS rover cameras at CIRC
+# Layouts/Design for each camera stream and its controls
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -12,7 +14,7 @@ from gi.repository import Gst
 # Consists of a main outer grid (Placeholder/stream, inner grid)
 # inner grid is a small menu for button placement
 class BaseCamGrid(Gtk.Grid):
-    def __init__(self, placement, pipeline_str, sink, screen_dim):
+    def __init__(self, placement, pipeline_str, sink):
         # Maybe inheritance somewhere as this same as old CamGrid so far
         Gst.init(None)
         Gtk.Grid.__init__(self)
@@ -21,8 +23,11 @@ class BaseCamGrid(Gtk.Grid):
         self.pipeline_str = pipeline_str
         self.pipeline = None
         self.sink = sink
-        self.width = screen_dim[0]
-        self.height = screen_dim[1]
+        #self.swap_callback = swap_callback
+        # self.width = 1280
+        # self.height = 960
+        self.width = 525
+        self.height = 295
         # Main grid everythings added to
         self.main_cam_grid = Gtk.Grid()
         self.add(self.main_cam_grid)
@@ -31,10 +36,9 @@ class BaseCamGrid(Gtk.Grid):
         # Inner grid for on/off buttons and camera label 
         self.inner_cam_grid = Gtk.Grid()
         self.inner_cam_grid.set_row_spacing(2)
-        self.inner_cam_grid.set_column_spacing(2)
-
+        self.inner_cam_grid.set_column_spacing(5)
         self.placeholder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.placeholder.set_size_request(self.width, self.height)
+        self.set_screen_size()
         self.placeholder.set_halign(Gtk.Align.START)
         self.placeholder.set_valign(Gtk.Align.START)
         # Background color is black
@@ -60,14 +64,18 @@ class BaseCamGrid(Gtk.Grid):
         self.inner_cam_grid.attach(self.cam_lbl,0,0,1,1)
         self.inner_cam_grid.attach(self.on_btn,1,0,1,1)
         self.inner_cam_grid.attach(self.off_btn,2,0,1,1)
-        self._build_swap()
+        self._build_swaps()
         self.main_cam_grid.attach(self.placeholder,0,0,1,1)
         self.main_cam_grid.attach(self.inner_cam_grid,0,1,1,1)
+
+    def set_screen_size(self):
+        self.placeholder.set_size_request(self.width, self.height)
 
     def stream_on(self):
         if not self.pipeline:
             self.pipeline = Gst.parse_launch(self.pipeline_str)
             gtksink = self.pipeline.get_by_name(self.sink)
+            # getting error here 
             self.widgetSink = gtksink.props.widget
             # same size as placeholder
             self.widgetSink.set_size_request(self.width,self.height)
@@ -109,34 +117,74 @@ class BaseCamGrid(Gtk.Grid):
         self.stream_off()
         
     # Overwritten by small cam child - basecam does nothing with this
-    def _build_swap(self):
+    def _build_swaps(self):
         pass
 
-class SmallCamGrid(BaseCamGrid):
-    # def __init__(self, placement, pipeline_str, sink, screen_dim, swap_func):
-    #     super().__init__(placement, pipeline_str, sink, screen_dim)
-        
-    #     # Passing in swap function - accessing seperate cams in main
-    #     self.swap_func = swap_func
+class LargeCamGrid(BaseCamGrid):
+    def __init__(self, placement, pipeline_str, sink, swap_callback):
+        super().__init__(placement, pipeline_str, sink)
 
+        self.swap_callback = swap_callback
+        self.width = 1280
+        self.height = 960
+        self.set_screen_size()
+        self.left_shown = False
+        self.front_shown = False
+        self.right_shown = False
+        self.back_shown = False
+
+    def set_screen_size(self):
+        self.placeholder.set_size_request(self.width, self.height)
 
     # adding extra focus feature to put small cam stream as main
-    def _build_swap(self):
-        self.swap_btn = Gtk.Button(label="Swap")
-        self.swap_btn.connect("clicked", self.swap_btn_click)
-        self.inner_cam_grid.attach(self.swap_btn,3,0,1,1)
+    def _build_swaps(self):
+        self.show_left_btn = Gtk.Button(label="Show Left")
+        self.show_left_btn.connect("clicked", self.show_left_btn_click)
+        self.inner_cam_grid.attach(self.show_left_btn,3,0,1,1)
 
+        self.show_right_btn = Gtk.Button(label="Show Right")
+        self.show_right_btn.connect("clicked", self.show_right_btn_click)
+        self.inner_cam_grid.attach(self.show_right_btn,4,0,1,1)
 
-    # later worry about multiple swaps and feeds getting mixed up - reset button?
-    # pass in the pipelines I want to swap
-    def swap_btn_click(self, widget):
-        # Want to turn off this camera stream, turn off the front camera stream
-        # turn this camera on in the front stream
-        # turn front cam on in this stream
+        self.show_back_btn = Gtk.Button(label="Show Back")
+        self.show_back_btn.connect("clicked", self.show_back_btn_click)
+        self.inner_cam_grid.attach(self.show_back_btn,5,0,1,1)
 
-        # modify off button to call an off function - to call that off function here
-        # Turns off small swapping camera
-        #self.swap_func(self)
-        pass
+        self.reset_front_btn = Gtk.Button(label="Reset Front")
+        self.reset_front_btn.connect("clicked", self.reset_front_btn_click)
+        self.inner_cam_grid.attach(self.reset_front_btn,6,0,1,1)
+
+    def show_left_btn_click(self, widget):
+        self.front_shown = False
+        self.right_shown = False
+        self.back_shown = False
+        # Sending left keyword to main
+        self.swap_callback("Left")
+
+        self.left_shown = True
+
+    def show_right_btn_click(self, widget):
+        self.front_shown = False
+        self.left_shown = False
+        self.back_shown = False
+        self.swap_callback("Right")
+
+        self.right_shown = True
+
+    def show_back_btn_click(self, widget):
+        self.front_shown = False
+        self.left_shown = False
+        self.right_shown = False
+        self.swap_callback("Back")
+
+        self.back_shown = True
+
+    def reset_front_btn_click(self, widget):
+        self.left_shown = False
+        self.right_shown = False
+        self.back_shown = False
+        self.swap_callback("Front")
+
+        self.front_shown = True
         
         
