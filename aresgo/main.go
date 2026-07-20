@@ -18,6 +18,9 @@ func main() {
 	// Websocket url is /ws, handles incoming connections using the websocket.Handle function
 	http.HandleFunc("/ws", websocket.Handle(state))
 
+	//conn1, _ := net.Dial("udp", "192.168.1.20:5999")
+	//defer conn1.Close()
+
 	go func() {
 		// This goroutine will print the current state to the console every 16 milliseconds (approximately 60 times per second)
 		ticker := time.NewTicker(16 * time.Millisecond)
@@ -34,6 +37,16 @@ func main() {
 				current.Arm.Gripper,
 				current.Mode,
 			)
+			/*
+				conn1.Write([]byte(fmt.Sprintf("DRIVE v=%.2f turn=%.2f | ARM s=%.2f e=%.2f g=%.2f | mode=%s\n",
+					current.Drive.Velocity,
+					current.Drive.Turn,
+					current.Arm.Shoulder,
+					current.Arm.Elbow,
+					current.Arm.Gripper,
+					current.Mode,
+				))) */
+
 		}
 
 	}()
