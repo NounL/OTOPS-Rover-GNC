@@ -1,0 +1,293 @@
+/* Data Interface (Fig 2) layout.
+   The panel arrangement follows the guidelines: arm visual and logs on the left,
+   motor and sensor feedback down the right. */
+
+/* index.css pins #root to a fixed centred column, which the Data UI needs to escape. */
+#root:has(.dataui) {
+  width: 100%;
+  max-width: none;
+  text-align: left;
+  border-inline: none;
+}
+
+.dataui {
+  --panel-bg: #14151a;
+  --panel-border: #2e303a;
+  --label: #8b93a7;
+  --value: #f3f4f6;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --idle: #6b7280;
+
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--value);
+  background: #0c0d11;
+  min-height: 100svh;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.dataui-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px 12px;
+  flex-wrap: wrap;
+}
+
+.dataui-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--value);
+}
+
+.dataui-status {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  color: var(--label);
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--idle);
+}
+.status-dot.up {
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+}
+.status-dot.down {
+  background: var(--bad);
+  box-shadow: 0 0 8px var(--bad);
+}
+
+/* Fig 2 grid: wide left column for visuals/logs, narrower right for readouts. */
+.dataui-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(340px, 1fr);
+  grid-template-rows: minmax(260px, 2fr) minmax(150px, 1fr) minmax(150px, 1fr);
+  gap: 10px;
+  height: calc(100svh - 76px);
+}
+
+@media (max-width: 1100px) {
+  .dataui-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    height: auto;
+  }
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--label);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.panel-visual {
+  grid-column: 1;
+  grid-row: 1;
+}
+.panel-motors {
+  grid-column: 2;
+  grid-row: 1;
+}
+.panel-events {
+  grid-column: 1;
+  grid-row: 2;
+}
+.panel-verbose {
+  grid-column: 1;
+  grid-row: 3;
+}
+.panel-sensors {
+  grid-column: 2;
+  grid-row: 2 / 4;
+}
+
+@media (max-width: 1100px) {
+  .panel-visual,
+  .panel-motors,
+  .panel-events,
+  .panel-verbose,
+  .panel-sensors {
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 240px;
+  }
+}
+
+.panel-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Motor readouts, shown as simple text per the guidelines. */
+.motor-row {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+.motor-row:last-child {
+  border-bottom: none;
+}
+
+.motor-name {
+  color: var(--value);
+  font-weight: 600;
+}
+
+.motor-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  color: var(--label);
+  font-size: 12.5px;
+}
+
+.motor-fields b {
+  color: var(--value);
+  font-weight: 500;
+}
+
+.status-ok {
+  color: var(--ok);
+}
+.status-warn {
+  color: var(--warn);
+}
+.status-bad {
+  color: var(--bad);
+}
+
+.sensor-group {
+  margin-bottom: 16px;
+}
+
+.sensor-group-title {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  color: var(--label);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.sensor-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.sensor-line span:first-child {
+  color: var(--label);
+}
+.sensor-line span:last-child {
+  color: var(--value);
+}
+
+.log-line {
+  display: flex;
+  gap: 10px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.log-time {
+  color: var(--idle);
+  flex-shrink: 0;
+}
+.log-msg {
+  color: var(--value);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-level-warn .log-msg {
+  color: var(--warn);
+}
+.log-level-error .log-msg {
+  color: var(--bad);
+}
+.log-level-debug .log-msg {
+  color: var(--label);
+}
+
+.log-empty {
+  color: var(--idle);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+.arm-visual {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.arm-visual svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+.joint-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding-top: 10px;
+  font-size: 12px;
+  color: var(--label);
+  flex-shrink: 0;
+}
+.joint-readout b {
+  color: var(--value);
+  font-weight: 500;
+}
+
+.dataui-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60svh;
+  color: var(--label);
+  font-size: 14px;
+}
