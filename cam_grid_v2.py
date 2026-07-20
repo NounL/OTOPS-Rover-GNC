@@ -46,6 +46,7 @@ class BaseCamGrid(Gtk.Grid):
             Gtk.StateFlags.NORMAL,
             Gdk.RGBA(0, 0, 0, 1)
         )
+        self.is_streaming = False
 
         self.cam_lbl = Gtk.Label()
         # Change text color
@@ -72,39 +73,61 @@ class BaseCamGrid(Gtk.Grid):
         self.placeholder.set_size_request(self.width, self.height)
 
     def stream_on(self):
-        if not self.pipeline:
-            self.pipeline = Gst.parse_launch(self.pipeline_str)
-            gtksink = self.pipeline.get_by_name(self.sink)
-            # getting error here 
-            self.widgetSink = gtksink.props.widget
-            # same size as placeholder
-            self.widgetSink.set_size_request(self.width,self.height)
+        # Only turn stream on when its off
+        #if not self.pipeline:
+        #self.is_streaming = True
+        if self.is_streaming:
+            print("Error: Stream already on")
+            return
 
-            # Trying to stop widget from expanding larger then the placeholder
-            # issue, i want the front main stream to expand, i want the small ones to shrink
-            # look into scaling inside the pipeline, but then theres the issue with switching
-            # and wanting to be large for the box
-            # want to figure out switch and inheritance then look at forcing certain size
-            # only want to force size on the 640 by 360 to make them even smaller to fit the boxes, 
-            # when switching want to force the main large sink to be smaller, (maybe just cuz i start and stop, i pass
-            # in different gst line that requests size, and do everything in the gst line requesting size
-            self.widgetSink.set_hexpand(False)
-            self.widgetSink.set_vexpand(False)
+        self.pipeline = Gst.parse_launch(self.pipeline_str)
+        gtksink = self.pipeline.get_by_name(self.sink)
+        if not gtksink:
+            print(f"ERROR: Could not find sink '{self.sink}' in pipeline.")
+            return
 
-            # Replacing empty placeholder with camera stream
-            self.main_cam_grid.remove(self.placeholder)
-            self.main_cam_grid.attach(self.widgetSink,0,0,1,1)
-            self.widgetSink.show()
-            self.pipeline.set_state(Gst.State.PLAYING)
+        self.widgetSink = gtksink.props.widget
+        # same size as placeholder
+        self.widgetSink.set_size_request(self.width,self.height)
+        self.widgetSink.set_hexpand(False)
+        self.widgetSink.set_vexpand(False)
+
+        # Replacing empty placeholder with camera stream
+        self.main_cam_grid.remove(self.placeholder)
+        self.main_cam_grid.attach(self.widgetSink,0,0,1,1)
+        self.widgetSink.show()
+
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+
+        # Will this start the pipeline?
+        #self.pipeline.set_state(Gst.State.PLAYING)
+        ret = self.pipeline.set_state(Gst.State.PLAYING)
+        if ret == Gst.StateChangeReturn.FAILURE:
+            print("Failed to start pipeline.")
+            self.stream_off()
         else:
             print("ERROR: Stream already connected.")
 
+        self.is_streaming = True
+
     def stream_off(self):
-        if self.pipeline:
+        if self.is_streaming:
+            self.is_streaming = False
             self.pipeline.set_state(Gst.State.NULL)
-            self.pipeline = None
+
+            # Wait until it has completely stopped
+            self.pipeline.get_state(Gst.CLOCK_TIME_NONE)
+
+            bus = self.pipeline.get_bus()
+            bus.remove_signal_watch()
+
             # Replace cam stream with empty placeholder
             self.main_cam_grid.remove(self.widgetSink)
+            #self.widgetSink.destroy()
+            self.widgetSink = None         
+            self.pipeline = None
+
             self.main_cam_grid.attach(self.placeholder,0,0,1,1)
             self.placeholder.show()
         else:

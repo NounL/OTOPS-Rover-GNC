@@ -84,134 +84,74 @@ class MainWindow(Gtk.Window):
         root_grid.attach(self.right_cam_grid,1,1,1,1)
         root_grid.attach(self.back_cam_grid,1,2,1,1)
 
-    # cleaner swap - get functionality below perfect first
-    def swap(self, value):
-        pass
+    # Swapping Front and target grid
+    def front_swap(self, target_grid:BaseCamGrid,pipeline_str,sink,label_text):
+        self.front_cam_grid.stream_off()
+        target_grid.stream_off()
 
-    # Show left, right, back in main and swap + front cam reset handled
-    # need to optimize the code
-    # Then consider quality of stream issue - do we need a way to request low quality?
-    # That issue when all 4 cameras on need to close app and restart, is there better way?
+        # Show big target stream in main grid - setter method?
+        self.front_cam_grid.pipeline_str = pipeline_str
+        self.front_cam_grid.sink = sink
+        self.front_cam_grid.stream_on()
+        self.front_cam_grid.cam_lbl.set_markup(f"<big>{label_text}</big>")
+
+        # Show front stream in small target grid
+        target_grid.pipeline_str = self.front_line_small
+        target_grid.sink = self.front_cam_sink
+        target_grid.stream_on()
+        target_grid.cam_lbl.set_markup("<big>Front</big>")
+
+    def cam_reset(self,cam_grid:BaseCamGrid,pipeline_str,sink,label_text):
+        cam_grid.stream_off()
+        cam_grid.pipeline_str = pipeline_str
+        cam_grid.sink = sink
+        cam_grid.stream_on()
+        cam_grid.cam_lbl.set_markup(f"<big>{label_text}</big>")
+
     def swap(self, value):
-        # need to also handle when they are both off, they should only swap when they're on - fix later
+        # Swapping with front
         if value == "Left" and self.front_cam_grid.left_shown == False:
-            self.front_cam_grid.stream_off()
-            self.left_cam_grid.stream_off()
-
-            # If these 2 are on reset them to not lose track of what cam is where
-            # they will move to different streams on the gui otherwise confusing everyone
-            # want to call a reset function of some sort? 
+            
+            # Need to reset all other cams during swaps as otherwise front would just swap with
+            # everything and all the small cams would be front, don't want to lose track of cams
             if self.right_cam_grid.pipeline:
-                self.right_cam_grid.stream_off()
-                self.right_cam_grid.pipeline_str = self.right_line_small
-                self.right_cam_grid.sink = self.right_cam_sink
-                self.right_cam_grid.stream_on()
-                self.right_cam_grid.cam_lbl.set_markup("<big>Right</big>")
+                self.cam_reset(self.right_cam_grid,self.right_line_small, self.right_cam_sink,"Right")
             if self.back_cam_grid.pipeline:
-                self.back_cam_grid.stream_off()
-                self.back_cam_grid.pipeline_str = self.back_line_small
-                self.back_cam_grid.sink = self.back_cam_sink
-                self.back_cam_grid.stream_on()
-                self.back_cam_grid.cam_lbl.set_markup("<big>Back</big>")
+                self.cam_reset(self.back_cam_grid,self.back_line_small, self.back_cam_sink,"Back")
 
-            # Show left stream in main grid - setter method?
-            self.front_cam_grid.pipeline_str = self.left_line_large
-            self.front_cam_grid.sink = self.left_cam_sink
-            self.front_cam_grid.stream_on()
-            self.front_cam_grid.cam_lbl.set_markup("<big>Left</big>")
-
-            # Show front stream in left grid
-            self.left_cam_grid.pipeline_str = self.front_line_small
-            self.left_cam_grid.sink = self.front_cam_sink
-            self.left_cam_grid.stream_on()
-            self.left_cam_grid.cam_lbl.set_markup("<big>Front</big>")
+            self.front_swap(self.left_cam_grid,self.left_line_large,self.left_cam_sink,value)
+        
         elif value == "Right" and self.front_cam_grid.right_shown == False:
-            self.front_cam_grid.stream_off()
-            self.right_cam_grid.stream_off()
-
+            
             if self.left_cam_grid.pipeline:
-                self.left_cam_grid.stream_off()
-                self.left_cam_grid.pipeline_str = self.left_line_small
-                self.left_cam_grid.sink = self.left_cam_sink
-                self.left_cam_grid.stream_on()
-                self.left_cam_grid.cam_lbl.set_markup("<big>Left</big>")
+                self.cam_reset(self.left_cam_grid,self.left_line_small,self.left_cam_sink,"Left")
             if self.back_cam_grid.pipeline:
-                self.back_cam_grid.stream_off()
-                self.back_cam_grid.pipeline_str = self.back_line_small
-                self.back_cam_grid.sink = self.back_cam_sink
-                self.back_cam_grid.stream_on()
-                self.back_cam_grid.cam_lbl.set_markup("<big>Back</big>")
+                self.cam_reset(self.back_cam_grid,self.back_line_small,self.back_cam_sink,"Back")
 
-            # Show right stream in main grid - setter method?
-            self.front_cam_grid.pipeline_str = self.right_line_large
-            self.front_cam_grid.sink = self.right_cam_sink
-            self.front_cam_grid.stream_on()
-            self.front_cam_grid.cam_lbl.set_markup("<big>Right</big>")
-
-            # Show front stream in right grid
-            self.right_cam_grid.pipeline_str = self.front_line_small
-            self.right_cam_grid.sink = self.front_cam_sink
-            self.right_cam_grid.stream_on()
-            self.right_cam_grid.cam_lbl.set_markup("<big>Front</big>")
+            self.front_swap(self.right_cam_grid,self.right_line_large,self.right_cam_sink,value)
+        
         elif value == "Back" and self.front_cam_grid.back_shown == False:
-            self.front_cam_grid.stream_off()
-            self.back_cam_grid.stream_off()
-
             if self.left_cam_grid.pipeline:
-                self.left_cam_grid.stream_off()
-                self.left_cam_grid.pipeline_str = self.left_line_small
-                self.left_cam_grid.sink = self.left_cam_sink
-                self.left_cam_grid.stream_on()
-                self.left_cam_grid.cam_lbl.set_markup("<big>Left</big>")
+                self.cam_reset(self.left_cam_grid,self.left_line_small,self.left_cam_sink,"Left")
             if self.right_cam_grid.pipeline:
-                self.right_cam_grid.stream_off()
-                self.right_cam_grid.pipeline_str = self.back_line_small
-                self.right_cam_grid.sink = self.back_cam_sink
-                self.right_cam_grid.stream_on()
-                self.right_cam_grid.cam_lbl.set_markup("<big>Right</big>")
+                self.cam_reset(self.right_cam_grid,self.right_line_small,self.right_cam_sink,"Right")
 
-            # Show back stream in main grid - setter method?
-            self.front_cam_grid.pipeline_str = self.back_line_large
-            self.front_cam_grid.sink = self.back_cam_sink
-            self.front_cam_grid.stream_on()
-            self.front_cam_grid.cam_lbl.set_markup("<big>Back</big>")
-
-            # Show front stream in back grid
-            self.back_cam_grid.pipeline_str = self.front_line_small
-            self.back_cam_grid.sink = self.front_cam_sink
-            self.back_cam_grid.stream_on()
-            self.back_cam_grid.cam_lbl.set_markup("<big>Front</big>")
+            self.front_swap(self.back_cam_grid,self.back_line_large,self.back_cam_sink,value)
         # Resetting front stream 
         elif value == "Front" and self.front_cam_grid.front_shown == False:
+            
             # When front being reset, want everything to also be reset
             # As either window could be showing front, they need to go back to og view
             if self.left_cam_grid.pipeline:
-                self.left_cam_grid.stream_off()
-                self.left_cam_grid.pipeline_str = self.left_line_small
-                self.left_cam_grid.sink = self.left_cam_sink
-                self.left_cam_grid.stream_on()
-                self.left_cam_grid.cam_lbl.set_markup("<big>Left</big>")
+                self.cam_reset(self.left_cam_grid,self.left_line_small,self.left_cam_sink,"Left")
             if self.right_cam_grid.pipeline:
-                self.right_cam_grid.stream_off()
-                self.right_cam_grid.pipeline_str = self.right_line_small
-                self.right_cam_grid.sink = self.right_cam_sink
-                self.right_cam_grid.stream_on()
-                self.right_cam_grid.cam_lbl.set_markup("<big>Right</big>")
+                self.cam_reset(self.right_cam_grid,self.right_line_small,self.right_cam_sink,"Right")
             if self.back_cam_grid.pipeline:
-                self.back_cam_grid.stream_off()
-                self.back_cam_grid.pipeline_str = self.back_line_small
-                self.back_cam_grid.sink = self.back_cam_sink
-                self.back_cam_grid.stream_on()
-                self.back_cam_grid.cam_lbl.set_markup("<big>Back</big>")
+                self.cam_reset(self.back_cam_grid,self.back_line_small,self.back_cam_sink,"Back")
 
-            self.front_cam_grid.stream_off()
-            self.front_cam_grid.pipeline_str = self.front_line
-            self.front_cam_grid.sink = self.front_cam_sink
-            self.front_cam_grid.stream_on()
-            self.front_cam_grid.cam_lbl.set_markup("<big>Front</big>")
-
+            self.cam_reset(self.front_cam_grid,self.front_line,self.front_cam_sink,"Front")
         else:
-            print(f"ERROR: Already showing {value} stream")
+            print(f"ERROR: Swap error, streams already swapped")
 
 window = MainWindow()
 window.connect("delete-event", Gtk.main_quit)
