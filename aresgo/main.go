@@ -38,14 +38,20 @@ func main() {
 		go mock.Run(telemetryState, 100*time.Millisecond)
 	}
 
-	// Opt-in because this prints ~60 lines a second and buries the connection logs.
-	if *printControl {
-		go func() {
-			ticker := time.NewTicker(16 * time.Millisecond)
-			defer ticker.Stop()
+	// This loop always runs, because it is where control state gets forwarded
+	// on to the rover. Only the console print is opt-in, since it emits ~60
+	// lines a second and buries the connection logs.
+	go func() {
+		ticker := time.NewTicker(16 * time.Millisecond)
+		defer ticker.Stop()
 
-			for range ticker.C {
-				current := controlState.Get()
+		//conn1, _ := net.Dial("udp", "192.168.1.20:5999")
+		//defer conn1.Close()
+
+		for range ticker.C {
+			current := controlState.Get()
+
+			if *printControl {
 				fmt.Printf(
 					"DRIVE v=%.2f turn=%.2f | ARM s=%.2f e=%.2f g=%.2f | mode=%s\n",
 					current.Drive.Velocity,
@@ -56,8 +62,18 @@ func main() {
 					current.Mode,
 				)
 			}
-		}()
-	}
+
+			/*
+				conn1.Write([]byte(fmt.Sprintf("DRIVE v=%.2f turn=%.2f | ARM s=%.2f e=%.2f g=%.2f | mode=%s\n",
+					current.Drive.Velocity,
+					current.Drive.Turn,
+					current.Arm.Shoulder,
+					current.Arm.Elbow,
+					current.Arm.Gripper,
+					current.Mode,
+				))) */
+		}
+	}()
 
 	log.Printf("ground station listening on %s", *addr)
 	log.Printf("  control    ws://localhost%s/ws", *addr)

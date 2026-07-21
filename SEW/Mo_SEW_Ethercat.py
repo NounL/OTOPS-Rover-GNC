@@ -1,4 +1,4 @@
-import pysoem
+import pysowem
 import struct
 import time
 import threading
