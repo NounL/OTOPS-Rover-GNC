@@ -13,10 +13,11 @@
 # If face issues on groundstation, run like this:
 # GDK_BACKEND=x11 python3 gui_v2.py
 
-# How to run stream - will later be just ./rtspstream
+# How to run stream when developing - will later be just ./rtspstream
 # gcc latest-rtspstream.c $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0)
 # ./a.out
 
+# Debugging purposes:
 # Scan for camera specs: 
 # v4l2-ctl --list-devices
 # v4l2-ctl --list-formats-ext --device /dev/video0
@@ -27,25 +28,20 @@
 # // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
 # // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/back latency=0 drop-o>
 
-
-
-
-
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
 from cam_grid_v2 import BaseCamGrid, LargeCamGrid
 
-# gi.require_version("Gst", "1.0")
-# from gi.repository import Gst
-
+# Main window of the software, displays everything in a root container
+# Controls swap functionality
 class MainWindow(Gtk.Window):
     def __init__(self):
         # Super classes constructor
         Gtk.Window.__init__(self, title="Ares' Amazing Cameras (OTOPS 2026)")
         # Size to perfectly fit groundstation
         self.set_default_size(1850,1000)
-        # Dark gray background
+        # Light gray background
         self.override_background_color(
             Gtk.StateFlags.NORMAL,
             Gdk.RGBA(0.5, 0.5, 0.5, 1)
@@ -66,12 +62,11 @@ class MainWindow(Gtk.Window):
         # front_line = "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
         #front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
         
-        # This ip for on rover nanobeam/prism network
-        #self.front_line = "rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
+        # Gstreamer connection pipeline strings - This ip for on rover nanobeam/prism network
+        # Large and small streams to fit large and small windows
         self.front_line = "rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
         self.front_line_small = "rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink"
         self.left_line_small = "rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink2"
-        # Larger streams that haven't been scaled down for showing in large main window
         self.left_line_large = "rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2"
         self.right_line_small = "rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink3"
         self.right_line_large = "rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink3"
@@ -83,6 +78,7 @@ class MainWindow(Gtk.Window):
         self.right_cam_sink = "sink3"
         self.back_cam_sink = "sink4"
 
+        # Uses a callback function to request data from the swap button pressed
         self.front_cam_grid = LargeCamGrid("Front", self.front_line, self.front_cam_sink, self.swap)
         self.left_cam_grid = BaseCamGrid("Left", self.left_line_small, self.left_cam_sink)
         self.right_cam_grid = BaseCamGrid("Right", self.right_line_small, self.right_cam_sink)
@@ -94,12 +90,12 @@ class MainWindow(Gtk.Window):
         root_grid.attach(self.right_cam_grid,1,1,1,1)
         root_grid.attach(self.back_cam_grid,1,2,1,1)
 
-    # Swapping Front and target grid
+    # Swapping Front and target grid by switching pipelines and sinks around
     def front_swap(self, target_grid:BaseCamGrid,pipeline_str,sink,label_text):
         self.front_cam_grid.stream_off()
         target_grid.stream_off()
 
-        # Show big target stream in main grid - setter method?
+        # Show big target stream in main grid
         self.front_cam_grid.pipeline_str = pipeline_str
         self.front_cam_grid.sink = sink
         self.front_cam_grid.stream_on()
@@ -111,6 +107,7 @@ class MainWindow(Gtk.Window):
         target_grid.stream_on()
         target_grid.cam_lbl.set_markup("<big>Front</big>")
 
+    # Reset camera to its originally set stream to undo swaps
     def cam_reset(self,cam_grid:BaseCamGrid,pipeline_str,sink,label_text):
         cam_grid.stream_off()
         cam_grid.pipeline_str = pipeline_str
@@ -118,8 +115,9 @@ class MainWindow(Gtk.Window):
         cam_grid.stream_on()
         cam_grid.cam_lbl.set_markup(f"<big>{label_text}</big>")
 
+    # Swap controller, takes swap type and calls swap and reset methods
+    # Swap always between a large front camera and a smaller camera
     def swap(self, value):
-        # Swapping with front
         if value == "Left" and self.front_cam_grid.left_shown == False:
             
             # Need to reset all other cams during swaps as otherwise front would just swap with
@@ -141,12 +139,14 @@ class MainWindow(Gtk.Window):
             self.front_swap(self.right_cam_grid,self.right_line_large,self.right_cam_sink,value)
         
         elif value == "Back" and self.front_cam_grid.back_shown == False:
+            
             if self.left_cam_grid.pipeline:
                 self.cam_reset(self.left_cam_grid,self.left_line_small,self.left_cam_sink,"Left")
             if self.right_cam_grid.pipeline:
                 self.cam_reset(self.right_cam_grid,self.right_line_small,self.right_cam_sink,"Right")
 
             self.front_swap(self.back_cam_grid,self.back_line_large,self.back_cam_sink,value)
+        
         # Resetting front stream 
         elif value == "Front" and self.front_cam_grid.front_shown == False:
             

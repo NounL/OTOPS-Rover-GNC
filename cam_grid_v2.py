@@ -15,7 +15,6 @@ from gi.repository import Gst
 # inner grid is a small menu for button placement
 class BaseCamGrid(Gtk.Grid):
     def __init__(self, placement, pipeline_str, sink):
-        # Maybe inheritance somewhere as this same as old CamGrid so far
         Gst.init(None)
         Gtk.Grid.__init__(self)
         self.placement = placement
@@ -23,11 +22,10 @@ class BaseCamGrid(Gtk.Grid):
         self.pipeline_str = pipeline_str
         self.pipeline = None
         self.sink = sink
-        #self.swap_callback = swap_callback
-        # self.width = 1280
-        # self.height = 960
+        # Original size of stream, overwritten in child for large camera
         self.width = 525
         self.height = 295
+        
         # Main grid everythings added to
         self.main_cam_grid = Gtk.Grid()
         self.add(self.main_cam_grid)
@@ -37,6 +35,7 @@ class BaseCamGrid(Gtk.Grid):
         self.inner_cam_grid = Gtk.Grid()
         self.inner_cam_grid.set_row_spacing(2)
         self.inner_cam_grid.set_column_spacing(5)
+
         self.placeholder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_screen_size()
         self.placeholder.set_halign(Gtk.Align.START)
@@ -55,6 +54,7 @@ class BaseCamGrid(Gtk.Grid):
         # Large text - can't seem to control font with numbers
         self.cam_lbl.set_markup(f"<big>{self.placement}</big>")
 
+        # Create, connect, and add buttons to the display
         self.on_btn = Gtk.Button(label="On")
         self.off_btn = Gtk.Button(label="Off")
 
@@ -74,19 +74,8 @@ class BaseCamGrid(Gtk.Grid):
     def stream_on(self):
         # Only turn stream on when its off
         if not self.pipeline:
-            print(self.pipeline_str)
-            print(self.sink)
-        #self.is_streaming = True
-        #if self.is_streaming:
-            # print("Error: Stream already on")
-            # return
-
             self.pipeline = Gst.parse_launch(self.pipeline_str)
             gtksink = self.pipeline.get_by_name(self.sink)
-            # if not gtksink:
-            #     print(f"ERROR: Could not find sink '{self.sink}' in pipeline.")
-            #     return
-
             self.widgetSink = gtksink.props.widget
             # same size as placeholder
             self.widgetSink.set_size_request(self.width,self.height)
@@ -98,18 +87,6 @@ class BaseCamGrid(Gtk.Grid):
             self.main_cam_grid.attach(self.widgetSink,0,0,1,1)
             self.widgetSink.show()
             self.pipeline.set_state(Gst.State.PLAYING)
-
-            #bus = self.pipeline.get_bus()
-            #bus.add_signal_watch()
-
-            # Will this start the pipeline?
-            #self.pipeline.set_state(Gst.State.PLAYING)
-            # ret = self.pipeline.set_state(Gst.State.PLAYING)
-            # if ret == Gst.StateChangeReturn.FAILURE:
-            #     print("Failed to start pipeline.")
-            #     self.stream_off()
-            # else:
-            #     print("ERROR: Stream already connected.")
         else:
             print("Error: Stream already on.")
 
@@ -118,17 +95,7 @@ class BaseCamGrid(Gtk.Grid):
             self.pipeline.set_state(Gst.State.NULL)
             self.pipeline = None
 
-            # Wait until it has completely stopped
-            # self.pipeline.get_state(Gst.CLOCK_TIME_NONE)
-
-            # bus = self.pipeline.get_bus()
-            # bus.remove_signal_watch()
-
-            # Replace cam stream with empty placeholder
             self.main_cam_grid.remove(self.widgetSink)
-            #self.widgetSink.destroy()
-            # self.widgetSink = None         
-            # self.pipeline = None
 
             self.main_cam_grid.attach(self.placeholder,0,0,1,1)
             self.placeholder.show()
@@ -145,6 +112,8 @@ class BaseCamGrid(Gtk.Grid):
     def _build_swaps(self):
         pass
 
+# This grid fits the large placeholder and has extra buttons to control swapping 
+# and resetting cameras 
 class LargeCamGrid(BaseCamGrid):
     def __init__(self, placement, pipeline_str, sink, swap_callback):
         super().__init__(placement, pipeline_str, sink)
@@ -153,6 +122,7 @@ class LargeCamGrid(BaseCamGrid):
         self.width = 1280
         self.height = 960
         self.set_screen_size()
+        # For tracking swaps
         self.left_shown = False
         self.front_shown = False
         self.right_shown = False
@@ -161,7 +131,7 @@ class LargeCamGrid(BaseCamGrid):
     def set_screen_size(self):
         self.placeholder.set_size_request(self.width, self.height)
 
-    # adding extra focus feature to put small cam stream as main
+    # Swap buttons to allow swapping camera streams
     def _build_swaps(self):
         self.show_left_btn = Gtk.Button(label="Show Left")
         self.show_left_btn.connect("clicked", self.show_left_btn_click)
@@ -179,13 +149,13 @@ class LargeCamGrid(BaseCamGrid):
         self.reset_front_btn.connect("clicked", self.reset_front_btn_click)
         self.inner_cam_grid.attach(self.reset_front_btn,6,0,1,1)
 
+    # Using a callback function in main window, sending keyword "Left"
+    # back to main window controlling swaps to swap based on the button pressed
     def show_left_btn_click(self, widget):
         self.front_shown = False
         self.right_shown = False
         self.back_shown = False
-        # Sending left keyword to main
         self.swap_callback("Left")
-
         self.left_shown = True
 
     def show_right_btn_click(self, widget):
@@ -193,7 +163,6 @@ class LargeCamGrid(BaseCamGrid):
         self.left_shown = False
         self.back_shown = False
         self.swap_callback("Right")
-
         self.right_shown = True
 
     def show_back_btn_click(self, widget):
@@ -201,7 +170,6 @@ class LargeCamGrid(BaseCamGrid):
         self.left_shown = False
         self.right_shown = False
         self.swap_callback("Back")
-
         self.back_shown = True
 
     def reset_front_btn_click(self, widget):
@@ -209,7 +177,6 @@ class LargeCamGrid(BaseCamGrid):
         self.right_shown = False
         self.back_shown = False
         self.swap_callback("Front")
-
         self.front_shown = True
         
         
