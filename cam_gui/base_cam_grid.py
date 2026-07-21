@@ -22,7 +22,7 @@ class BaseCamGrid(Gtk.Grid):
         self.pipeline_str = pipeline_str
         self.pipeline = None
         self.sink = sink
-        # Original size of stream, overwritten in child for large camera
+        # Size of small stream, overwritten in child for large camera
         self.width = 525
         self.height = 295
         

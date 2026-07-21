@@ -31,7 +31,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
-from cam_grid_v2 import BaseCamGrid, LargeCamGrid
+from base_cam_grid import BaseCamGrid, LargeCamGrid
 
 # Main window of the software, displays everything in a root container
 # Controls swap functionality
