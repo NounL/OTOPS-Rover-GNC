@@ -21,6 +21,16 @@
 # v4l2-ctl --list-devices
 # v4l2-ctl --list-formats-ext --device /dev/video0
 
+# Testing cameras out of gui
+# gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! ximagesink
+# // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+# // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+# // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/back latency=0 drop-o>
+
+
+
+
+
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
@@ -60,7 +70,7 @@ class MainWindow(Gtk.Window):
         #self.front_line = "rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
         self.front_line = "rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! gtksink name=sink"
         self.front_line_small = "rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink"
-        self.left_line_small = "rtspsrc location=rtsp://localhost:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink2"
+        self.left_line_small = "rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink2"
         # Larger streams that haven't been scaled down for showing in large main window
         self.left_line_large = "rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink2"
         self.right_line_small = "rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! videoscale ! video/x-raw, width=525, height=295 ! gtksink name=sink3"

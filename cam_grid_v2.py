@@ -46,7 +46,6 @@ class BaseCamGrid(Gtk.Grid):
             Gtk.StateFlags.NORMAL,
             Gdk.RGBA(0, 0, 0, 1)
         )
-        self.is_streaming = False
 
         self.cam_lbl = Gtk.Label()
         # Change text color
@@ -74,59 +73,62 @@ class BaseCamGrid(Gtk.Grid):
 
     def stream_on(self):
         # Only turn stream on when its off
-        #if not self.pipeline:
+        if not self.pipeline:
+            print(self.pipeline_str)
+            print(self.sink)
         #self.is_streaming = True
-        if self.is_streaming:
-            print("Error: Stream already on")
-            return
+        #if self.is_streaming:
+            # print("Error: Stream already on")
+            # return
 
-        self.pipeline = Gst.parse_launch(self.pipeline_str)
-        gtksink = self.pipeline.get_by_name(self.sink)
-        if not gtksink:
-            print(f"ERROR: Could not find sink '{self.sink}' in pipeline.")
-            return
+            self.pipeline = Gst.parse_launch(self.pipeline_str)
+            gtksink = self.pipeline.get_by_name(self.sink)
+            # if not gtksink:
+            #     print(f"ERROR: Could not find sink '{self.sink}' in pipeline.")
+            #     return
 
-        self.widgetSink = gtksink.props.widget
-        # same size as placeholder
-        self.widgetSink.set_size_request(self.width,self.height)
-        self.widgetSink.set_hexpand(False)
-        self.widgetSink.set_vexpand(False)
+            self.widgetSink = gtksink.props.widget
+            # same size as placeholder
+            self.widgetSink.set_size_request(self.width,self.height)
+            self.widgetSink.set_hexpand(False)
+            self.widgetSink.set_vexpand(False)
 
-        # Replacing empty placeholder with camera stream
-        self.main_cam_grid.remove(self.placeholder)
-        self.main_cam_grid.attach(self.widgetSink,0,0,1,1)
-        self.widgetSink.show()
+            # Replacing empty placeholder with camera stream
+            self.main_cam_grid.remove(self.placeholder)
+            self.main_cam_grid.attach(self.widgetSink,0,0,1,1)
+            self.widgetSink.show()
+            self.pipeline.set_state(Gst.State.PLAYING)
 
-        bus = self.pipeline.get_bus()
-        bus.add_signal_watch()
+            #bus = self.pipeline.get_bus()
+            #bus.add_signal_watch()
 
-        # Will this start the pipeline?
-        #self.pipeline.set_state(Gst.State.PLAYING)
-        ret = self.pipeline.set_state(Gst.State.PLAYING)
-        if ret == Gst.StateChangeReturn.FAILURE:
-            print("Failed to start pipeline.")
-            self.stream_off()
+            # Will this start the pipeline?
+            #self.pipeline.set_state(Gst.State.PLAYING)
+            # ret = self.pipeline.set_state(Gst.State.PLAYING)
+            # if ret == Gst.StateChangeReturn.FAILURE:
+            #     print("Failed to start pipeline.")
+            #     self.stream_off()
+            # else:
+            #     print("ERROR: Stream already connected.")
         else:
-            print("ERROR: Stream already connected.")
-
-        self.is_streaming = True
+            print("Error: Stream already on.")
 
     def stream_off(self):
-        if self.is_streaming:
-            self.is_streaming = False
+        if self.pipeline:
             self.pipeline.set_state(Gst.State.NULL)
+            self.pipeline = None
 
             # Wait until it has completely stopped
-            self.pipeline.get_state(Gst.CLOCK_TIME_NONE)
+            # self.pipeline.get_state(Gst.CLOCK_TIME_NONE)
 
-            bus = self.pipeline.get_bus()
-            bus.remove_signal_watch()
+            # bus = self.pipeline.get_bus()
+            # bus.remove_signal_watch()
 
             # Replace cam stream with empty placeholder
             self.main_cam_grid.remove(self.widgetSink)
             #self.widgetSink.destroy()
-            self.widgetSink = None         
-            self.pipeline = None
+            # self.widgetSink = None         
+            # self.pipeline = None
 
             self.main_cam_grid.attach(self.placeholder,0,0,1,1)
             self.placeholder.show()
