@@ -24,9 +24,9 @@
 
 # Testing cameras out of gui
 # gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! ximagesink
-# // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
-# // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
-# // gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/back latency=0 drop-o>
+# gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+# gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+# gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/back latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -57,10 +57,11 @@ class MainWindow(Gtk.Window):
         root_grid.set_row_spacing(2)
         root_grid.set_column_spacing(2)
 
+        # 1 H264 webcam, 3 mjpeg innomakers
         # still tcp/udp issue?
-        # 3 innomakers - mjpeg
         # front_line = "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
-        #front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
+        # ip for OTOPS black router
+        # front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
         
         # Gstreamer connection pipeline strings - This ip for on rover nanobeam/prism network
         # Large and small streams to fit large and small windows
