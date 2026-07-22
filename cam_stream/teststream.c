@@ -15,7 +15,7 @@
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-server.h>
 
-#define NUM_CAMERAS 1
+#define NUM_CAMERAS 4
 
 void gst_rtsp_server_run(int port)
 {
@@ -26,13 +26,36 @@ void gst_rtsp_server_run(int port)
     // Array of factory pointers - need a factory for each port
     GstRTSPMediaFactory *factories[NUM_CAMERAS];
 
-    char *pipeline_descs[NUM_CAMERAS] = {
-        // To test multi-stream just copy and paste this however many times and change NUM_CAMERAS
-        "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )"
-        // "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
-        // "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
-        // "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )"
-    };
+    // 4 pipelines with 1000 allocated for the max length of each pipeline
+    char pipeline_descs[NUM_CAMERAS][1000];
+
+    // char *pipeline_descs[NUM_CAMERAS] = {
+    //     // To test multi-stream just copy and paste this however many times and change NUM_CAMERAS
+    //     "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
+    //     "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+    //     "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+    //     "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+    // };
+
+    // New pipeline format to allow for dynamic device names - testing it 
+    // accpets variables embedded
+    for (int i = 0; i < NUM_CAMERAS; i++){
+        if (i == 0) {
+            sprintf(
+                pipeline_descs[i],
+                "( %s is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
+                "videotestsrc"
+            );
+        }
+        else {
+            // creating char array and accepts variables for dynamic strings
+            sprintf(
+                pipeline_descs[i],
+                "( %s is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+                "videotestsrc"
+            );
+        }
+    }
 
     gst_init(NULL, NULL);
 
