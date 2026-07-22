@@ -1,0 +1,23 @@
+first line garbage dont need skip
+more garbage to skip
+
+Innomaker-U20CAM-1080p-S1: Inno (usb-3610000.usb-1.2):
+        /dev/video2
+        /dev/video3
+        /dev/media2
+
+Innomaker-U20CAM-1080p-S1: Inno (usb-3610000.usb-1.3):
+        /dev/video4
+        /dev/video5
+        /dev/media3
+
+HD Web Camera: HD Web Camera (usb-3610000.usb-1.4):
+        /dev/video6
+        /dev/video7
+        /dev/media4
+
+Innomaker-U20CAM-1080p-S1: Inno (usb-3610000.usb-2.4):
+        /dev/video0
+        /dev/video1
+        /dev/media1
+
