@@ -1,0 +1,42 @@
+Ares Amazing Cameras Checklist OTOPS 2026
+Camera stream service is running on boot, but sometimes on boot the camera numbers change, 
+we then need to ssh in and stop and disable the service, change the hardcoded device numbers 
+in the code, execute, then restart the service. 
+
+Important: We must know which cam is plugged into which usb c hub port. Its easy to tell the front 
+HD Webcam but the innomakers all have the same info in list-devices command
+
+1. Make sure connected to jetson:
+ssh otops@192.168.1.31
+password: Rover1234
+
+2. Check devices for dev/video numbers:
+v4l2-ctl --list-devices
+
+3. Verify these numbers for the cooresponding camera match whats in rtspstream.c in
+Documents/CamStream
+
+4. If they don't match, can check service status, then stop, and disable:
+systemctl status rtspstream.service
+sudo systemctl stop rtspstream.service
+sudo systemctl disable rtspstream.service
+
+5. In rtspstream.c change the nums to match the devices, save and compile, name executable:
+gcc latest-rtspstream.c -o rtspstream $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0)
+must be called rtspstream as service points to executable named rtspstream, must be kept in same folder
+
+6. Enable, then start:
+sudo systemctl enable rtspstream.service
+sudo systemctl start rtspstream.service
+
+7. Service should be running and from groundstation can open camera app main.py and run Cameras
+may want to physically check front cam is connected to front stream, same for left, right, back
+
+8. From here cams should stay the same on restart, UNLESS someone unplugs the usbs 
+and device nums get thrown around, then we need to do this all again 
+
+Launching if ui not connecting for some reason:
+gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/front latency=0 drop-on-latency=true ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! ximagesink
+gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/left latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/right latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+gst-launch-1.0 rtspsrc location=rtsp://192.168.1.31:8554/back latency=0 drop-on-latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
