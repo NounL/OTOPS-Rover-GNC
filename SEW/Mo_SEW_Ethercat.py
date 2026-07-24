@@ -319,12 +319,6 @@ udp_thread.start()
 
 time.sleep(0.5)
 
-# replaces the old keyboard `while True: keyboard.is_pressed(...)`
-# loop. There's no interactive input anymore - this just keeps the
-# process alive while processdata_thread and udp_listener_thread do
-# the real work, until a signal (Ctrl-C / service stop) flips `running`
-# to False. The `finally` block below used to pair with a `try` that
-# contained the keyboard loop; that pairing is preserved here.
 print(f"[main] ready - listening for drive commands on udp {UDP_HOST}:{UDP_PORT}")
 
 try:
