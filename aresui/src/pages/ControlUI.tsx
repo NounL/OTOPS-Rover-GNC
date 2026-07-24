@@ -1,6 +1,6 @@
 // Control Interface (Fig 1). Sends operator input to the rover.
 import { useEffect } from 'react';
-import { useGamepad } from '../hooks/useGamepad';
+import { useGamepad } from '../hooks/useGamepadreplacement';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 export default function ControlUI() {
@@ -35,17 +35,19 @@ export default function ControlUI() {
           {/* Drive Panel */}
           <div style={{ background: '#1c1c1c', padding: '20px', borderRadius: '6px', border: '1px solid #333' }}>
             <h2>[ SUBSYSTEM: DRIVE ]</h2>
-            <p>Velocity Vector : <span style={{ color: '#fff' }}>{telemetry.drive.velocity.toFixed(4)}</span></p>
-            <p>Turn Rate Scalar: <span style={{ color: '#fff' }}>{telemetry.drive.turn.toFixed(4)}</span></p>
+            <p>Linear Velocity : <span style={{ color: '#fff' }}>{telemetry.drive.linear_velocity.toFixed(4)}</span></p>
+            <p>Angular Velocity: <span style={{ color: '#fff' }}>{telemetry.drive.angular_velocity.toFixed(4)}</span></p>
           </div>
 
           {/* Robotics Panel */}
           <div style={{ background: '#1c1c1c', padding: '20px', borderRadius: '6px', border: '1px solid #333' }}>
             <h2>[ SUBSYSTEM: ROBOTIC ARM ]</h2>
-            <p>Shoulder Angle : <span style={{ color: '#fff' }}>{telemetry.arm.shoulder.toFixed(4)}</span></p>
-            <p>Elbow Flexion   : <span style={{ color: '#fff' }}>{telemetry.arm.elbow.toFixed(4)}</span></p>
-            <p>Gripper State  : <span style={{ color: '#fff' }}>
-              {telemetry.arm.gripper === 1 ? 'OPENING' : telemetry.arm.gripper === -1 ? 'CLOSING' : 'NEUTRAL'}
+            <p>Base    : <span style={{ color: '#fff' }}>{telemetry.arm.base.toFixed(4)}</span></p>
+            <p>Shoulder: <span style={{ color: '#fff' }}>{telemetry.arm.shoulder.toFixed(4)}</span></p>
+            <p>Elbow   : <span style={{ color: '#fff' }}>{telemetry.arm.elbow.toFixed(4)}</span></p>
+            <p>Wrist   : <span style={{ color: '#fff' }}>{telemetry.arm.wrist.toFixed(4)}</span></p>
+            <p>Gripper : <span style={{ color: '#fff' }}>
+              {telemetry.arm.gripper > 0 ? 'OPENING' : telemetry.arm.gripper < 0 ? 'CLOSING' : 'NEUTRAL'}
             </span></p>
           </div>
 
@@ -53,7 +55,7 @@ export default function ControlUI() {
           <div style={{ background: '#1c1c1c', padding: '20px', borderRadius: '6px', border: '1px solid #333', gridColumn: 'span 2' }}>
             <h2>[ SYSTEM STATUS OVERVIEW ]</h2>
             <p>Operational Mode: <span style={{ color: '#fff' }}>{telemetry.mode}</span></p>
-            <p>Emergency E-STOP: <span style={{ color: telemetry.estop ? '#ff4c4c' : '#4cff4c' }}>{telemetry.estop ? 'ENGAGED' : 'INACTIVE'}</span></p>
+            <p>Speed Scale     : <span style={{ color: '#fff' }}>{telemetry.speed_scale.toFixed(2)}</span></p>
             <p>Frame Timestamp : <span style={{ color: '#888' }}>{telemetry.timestamp}</span></p>
           </div>
         </div>

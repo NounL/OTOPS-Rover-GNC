@@ -16,7 +16,7 @@ type State struct {
 func NewState() *State {
 	return &State{
 		value: model.ControlState{
-			Mode: "manual",
+			Mode: model.ModeDrive,
 		},
 	}
 }

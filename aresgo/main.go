@@ -8,6 +8,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -52,26 +53,16 @@ func main() {
 			current := controlState.Get()
 
 			if *printControl {
-				fmt.Printf(
-					"DRIVE v=%.2f turn=%.2f | ARM s=%.2f e=%.2f g=%.2f | mode=%s\n",
-					current.Drive.Velocity,
-					current.Drive.Turn,
-					current.Arm.Shoulder,
-					current.Arm.Elbow,
-					current.Arm.Gripper,
-					current.Mode,
-				)
+				data, err := json.Marshal(current)
+				if err == nil {
+					fmt.Println(string(data))
+				}
 			}
 
 			/*
-				conn1.Write([]byte(fmt.Sprintf("DRIVE v=%.2f turn=%.2f | ARM s=%.2f e=%.2f g=%.2f | mode=%s\n",
-					current.Drive.Velocity,
-					current.Drive.Turn,
-					current.Arm.Shoulder,
-					current.Arm.Elbow,
-					current.Arm.Gripper,
-					current.Mode,
-				))) */
+				payload, _ := json.Marshal(current)
+				conn1.Write(payload)
+			*/
 		}
 	}()
 

@@ -18,12 +18,12 @@ export function useWebSocket(url: string) {
             socketRef.current = ws;
 
             ws.onopen = () => {
-                console.log("🟢 WebSocket Network Connection Established!");
+                console.log("WebSocket Network Connection Established!");
                 setIsConnected(true);
             };
 
-            ws.onclose = () => {
-                console.log("🔴 WebSocket Disconnected.");
+            ws.onclose = (ev) => {
+                console.log("WebSocket Disconnected.");
                 setIsConnected(false);
                 
                 // 2. Auto Reconnect Engine: If the Go server drops, check back every 3 seconds
@@ -47,8 +47,11 @@ export function useWebSocket(url: string) {
                 clearTimeout(reconnectTimeoutRef.current);
             }
             if (socketRef.current) {
-                // Remove the onclose listener first so it doesn't try to reconnect while shutting down
-                socketRef.current.onclose = null; 
+                // Remove onclose/onerror first: in dev, StrictMode intentionally
+                // mounts this effect twice, and closing the first (still-connecting)
+                // socket here is expected teardown, not a real pipeline error.
+                socketRef.current.onclose = null;
+                socketRef.current.onerror = null;
                 socketRef.current.close();
             }
         };

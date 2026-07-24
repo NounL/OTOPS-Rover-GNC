@@ -1,18 +1,22 @@
-export interface Drive {
-  velocity: number;
-  turn: number;
+export type Mode = "DRIVE" | "ARM";
+
+export interface DriveStruct {
+  linear_velocity: number;
+  angular_velocity: number;
 }
 
-export interface Arm {
+export interface ArmStruct {
+  base: number;
   shoulder: number;
   elbow: number;
+  wrist: number;
   gripper: number;
 }
 
 export interface ControlState {
-  drive: Drive;
-  arm: Arm;
-  mode: string;
-  estop: boolean;
+  mode: Mode;
+  speed_scale: number;
+  drive: DriveStruct;
+  arm: ArmStruct;
   timestamp: number;
 }
