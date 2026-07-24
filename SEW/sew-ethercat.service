@@ -1,0 +1,32 @@
+# fill in the paths/user below for the actual Jetson before installing.
+# This is not a completed file, needs to be looked into, I have it here just
+# as an idea, since this service is critical it should be able to restart itself
+# on failure and automatically start on bootup
+#
+#
+# Install:
+#   sudo cp sew-ethercat.service /etc/systemd/system/sew-ethercat.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sew-ethercat.service
+#
+# Logs:
+#   journalctl -u sew-ethercat.service -f
+
+[Unit]
+Description=SEW EtherCAT drive controller (UDP command listener)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# CHANGE_ME: absolute path to this script on the Jetson.
+ExecStart=/usr/bin/python3 /home/CHANGE_ME/SEW/Mo_SEW_Ethercat.py
+# CHANGE_ME: run as the user granted cap_net_raw/cap_net_admin on python3
+# (see step 1 - `sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f $(which python3))`),
+# rather than running the whole service as root.
+User=CHANGE_ME
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
