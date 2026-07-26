@@ -19,7 +19,7 @@ import cv2 as cv
 import time
 import glob
 
-# Need to change paths for picures/panoramas for groundstation
+# Make sure file paths match groundstation
 
 # Grid Layout of a camera stream interface, with the stream, and control buttons
 # Consists of a main outer grid (Placeholder/stream, inner grid)
@@ -227,7 +227,6 @@ class LargeCamGrid(BaseCamGrid):
     def pic_taker_btn_click(self, widget):
         # Get time of photo to prevent overwriting - creates unique photo names
         ts = int(time.time())
-        # Change this for groundstation
         path = f"cam_gui/pictures/photo{ts}.jpg"
         self.snap(path)
 
