@@ -1,4 +1,4 @@
-# Ares' Amazing Cameras (OTOPS 2026)
+# Ares' Amazing Cameras (OTOPS 2026) - testing with test sources
 # Olly Love
 # 2025/2026 Interface for controlling the OTOPS rover cameras at CIRC
 # Helpful Source: https://www.youtube.com/watch?v=FszqUfibD3w
@@ -58,10 +58,8 @@ class MainWindow(Gtk.Window):
         root_grid.set_column_spacing(2)
 
         # 1 H264 webcam, 3 mjpeg innomakers
-        # still tcp/udp issue?
-        # front_line = "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
-        # ip for OTOPS black router
-        # front_line = "rtspsrc location=rtsp://192.168.0.2:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
+        # if udp issue encountered then add protocols=tcp after link ie
+        # "rtspsrc location=rtsp://localhost:8554/front protocols=tcp latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! gtksink name=sink"
         
         # Gstreamer connection pipeline strings - This ip for on rover nanobeam/prism network
         # Large and small streams to fit large and small windows
@@ -79,8 +77,14 @@ class MainWindow(Gtk.Window):
         self.right_cam_sink = "sink3"
         self.back_cam_sink = "sink4"
 
+        # opencv accesses these to take pictures
+        self.front_url = "rtsp://192.168.1.31:8554/front"
+        self.left_url = "rtsp://192.168.1.31:8554/left"
+        self.right_url = "rtsp://192.168.1.31:8554/right"
+        self.back_url = "rtsp://192.168.1.31:8554/back"
+
         # Uses a callback function to request data from the swap button pressed
-        self.front_cam_grid = LargeCamGrid("Front", self.front_line, self.front_cam_sink, self.swap)
+        self.front_cam_grid = LargeCamGrid("Front", self.front_line, self.front_cam_sink, self.front_url, self.swap)
         self.left_cam_grid = BaseCamGrid("Left", self.left_line_small, self.left_cam_sink)
         self.right_cam_grid = BaseCamGrid("Right", self.right_line_small, self.right_cam_sink)
         self.back_cam_grid = BaseCamGrid("Back", self.back_line_small, self.back_cam_sink)
@@ -92,9 +96,12 @@ class MainWindow(Gtk.Window):
         root_grid.attach(self.back_cam_grid,1,2,1,1)
 
     # Swapping Front and target grid by switching pipelines and sinks around
-    def front_swap(self, target_grid:BaseCamGrid,pipeline_str,sink,label_text):
+    def front_swap(self, target_grid:BaseCamGrid,pipeline_str,sink,url,label_text):
         self.front_cam_grid.stream_off()
         target_grid.stream_off()
+
+        # set to url of stream passed in for screenshots
+        self.front_cam_grid.url = url
 
         # Show big target stream in main grid
         self.front_cam_grid.pipeline_str = pipeline_str
@@ -128,7 +135,7 @@ class MainWindow(Gtk.Window):
             if self.back_cam_grid.pipeline:
                 self.cam_reset(self.back_cam_grid,self.back_line_small, self.back_cam_sink,"Back")
 
-            self.front_swap(self.left_cam_grid,self.left_line_large,self.left_cam_sink,value)
+            self.front_swap(self.left_cam_grid,self.left_line_large,self.left_cam_sink,self.left_url,value)
         
         elif value == "Right" and self.front_cam_grid.right_shown == False:
             
@@ -137,7 +144,7 @@ class MainWindow(Gtk.Window):
             if self.back_cam_grid.pipeline:
                 self.cam_reset(self.back_cam_grid,self.back_line_small,self.back_cam_sink,"Back")
 
-            self.front_swap(self.right_cam_grid,self.right_line_large,self.right_cam_sink,value)
+            self.front_swap(self.right_cam_grid,self.right_line_large,self.right_cam_sink,self.right_url,value)
         
         elif value == "Back" and self.front_cam_grid.back_shown == False:
             
@@ -146,7 +153,7 @@ class MainWindow(Gtk.Window):
             if self.right_cam_grid.pipeline:
                 self.cam_reset(self.right_cam_grid,self.right_line_small,self.right_cam_sink,"Right")
 
-            self.front_swap(self.back_cam_grid,self.back_line_large,self.back_cam_sink,value)
+            self.front_swap(self.back_cam_grid,self.back_line_large,self.back_cam_sink,self.back_url,value)
         
         # Resetting front stream 
         elif value == "Front" and self.front_cam_grid.front_shown == False:
@@ -160,6 +167,7 @@ class MainWindow(Gtk.Window):
             if self.back_cam_grid.pipeline:
                 self.cam_reset(self.back_cam_grid,self.back_line_small,self.back_cam_sink,"Back")
 
+            self.front_cam_grid.url = self.front_url
             self.cam_reset(self.front_cam_grid,self.front_line,self.front_cam_sink,"Front")
         else:
             print(f"ERROR: Swap error, streams already swapped")

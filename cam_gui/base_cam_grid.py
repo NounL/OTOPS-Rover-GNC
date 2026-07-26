@@ -10,6 +10,17 @@ from gi.repository import Gtk, Gdk
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
 
+# for taking 
+# I have version 4.6.0 - GS version just needs to match the features im using
+# sudo apt update
+# sudo apt install python3-dev python3-pip -y
+# pip install opencv-python
+import cv2 as cv
+import time
+import glob
+
+# Need to change paths for picures/panoramas for groundstation
+
 # Grid Layout of a camera stream interface, with the stream, and control buttons
 # Consists of a main outer grid (Placeholder/stream, inner grid)
 # inner grid is a small menu for button placement
@@ -65,6 +76,7 @@ class BaseCamGrid(Gtk.Grid):
         self.inner_cam_grid.attach(self.on_btn,1,0,1,1)
         self.inner_cam_grid.attach(self.off_btn,2,0,1,1)
         self._build_swaps()
+        self._build_pic_takers()
         self.main_cam_grid.attach(self.placeholder,0,0,1,1)
         self.main_cam_grid.attach(self.inner_cam_grid,0,1,1,1)
 
@@ -108,16 +120,21 @@ class BaseCamGrid(Gtk.Grid):
     def off_btn_click(self, widget):
         self.stream_off()
         
-    # Overwritten by small cam child - basecam does nothing with this
+    # Overwritten by large cam grid child - basecam does nothing with this
     def _build_swaps(self):
+        pass
+
+    # Overwritten by large cam grid child - basecam ignores
+    def _build_pic_takers(self):
         pass
 
 # This grid fits the large placeholder and has extra buttons to control swapping 
 # and resetting cameras 
 class LargeCamGrid(BaseCamGrid):
-    def __init__(self, placement, pipeline_str, sink, swap_callback):
+    def __init__(self, placement, pipeline_str, sink, url, swap_callback):
         super().__init__(placement, pipeline_str, sink)
 
+        self.url = url
         self.swap_callback = swap_callback
         self.width = 1280
         self.height = 960
@@ -149,6 +166,18 @@ class LargeCamGrid(BaseCamGrid):
         self.reset_front_btn.connect("clicked", self.reset_front_btn_click)
         self.inner_cam_grid.attach(self.reset_front_btn,6,0,1,1)
 
+    # Build buttons for taking pictures and panoramas
+    # may need callbacks like how swap works for main to request pics
+    def _build_pic_takers(self):
+        self.pic_taker_btn = Gtk.Button(label="Take Picture")
+        self.pic_taker_btn.connect("clicked", self.pic_taker_btn_click)
+        self.inner_cam_grid.attach(self.pic_taker_btn,7,0,1,1)
+
+        # Worry more about after pic taker working
+        self.panorama_btn = Gtk.Button(label="Take Panorama")
+        self.panorama_btn.connect("clicked", self.panorama_btn_click)
+        self.inner_cam_grid.attach(self.panorama_btn,8,0,1,1)
+
     # Using a callback function in main window, sending keyword "Left"
     # back to main window controlling swaps to swap based on the button pressed
     def show_left_btn_click(self, widget):
@@ -178,5 +207,78 @@ class LargeCamGrid(BaseCamGrid):
         self.back_shown = False
         self.swap_callback("Front")
         self.front_shown = True
-        
+
+    # Captures a single frame (picture) from camera stream
+    def snap(self, path):
+        # grab just the rtsp url (rtsp://localhost:8554/front) to capture frames
+        url = self.url
+        cap = cv.VideoCapture(url)
+        ret, frame = cap.read()
+        if ret:
+            cv.imwrite(path, frame)
+            print("Photo Saved!")
+            # Returning the image
+            return frame
+        else:
+            print("ERROR: Camera not returning values.")
+        cap.release()
+
+    # Take picture from stream
+    def pic_taker_btn_click(self, widget):
+        # Get time of photo to prevent overwriting - creates unique photo names
+        ts = int(time.time())
+        # Change this for groundstation
+        path = f"cam_gui/pictures/photo{ts}.jpg"
+        self.snap(path)
+
+    # Every interval take a pic as user rotating the rover, then stitch together as a panorama
+    # If rotation fast, interval < 0.5 seconds, if slow 1 second or even higher
+    # May later add GPS
+    def panorama_btn_click(self, widget):
+        ts = int(time.time())
+        pan_frames = []
+        pan_data = "cam_gui/panorama_data"
+        pan_complete = "cam_gui/panoramas"
+
+        # Big issue: During this can't see the stream
+        # Taking 20 pics while user rotating rover to stitch together
+        # Storing in pan_data
+        # for i in range(20):
+        #     path = f"{pan_data}/pan{i}.jpg"
+        #     frame = self.snap(path)
+        #     if frame is not None:
+        #         pan_frames.append(frame)
+        #     else:
+        #         print("ERROR: Panorama not receiving an image file.")
+        #     time.sleep(0.5)
+
+        # print("Panorama pictures gathered.")
+
+        # To actually consistently see the panorama were taking
+        # Could, instead of the above, take single pics at a time, 
+        # and copy and paste those to panorama_data folder 
+
+        # Create list of images from panorama_data folder
+        for img_path in glob.glob(f"{pan_data}/*.jpg"):
+            img = cv.imread(img_path)
+            if img is not None:
+                # Debugging
+                # print("Image in list")
+                # cv.imshow("test",img)
+                # cv.waitKey(0)
+                # cv.destroyAllWindows()
+                pan_frames.append(img)
+
+        print("Panorama pictures gathered.")
+
+        # This code may not work, 
+        # If always freezes our gui, can just exit and go back in
+        # Stitch pics together for a finished panorama
+        # Creating from list of frames
+        stitcher = cv.Stitcher_create(cv.Stitcher_PANORAMA)
+        status, panorama = stitcher.stitch(pan_frames)
+        if status == cv.Stitcher_OK:
+            cv.imwrite(f"{pan_complete}/pan{ts}.jpg", panorama)
+        else:
+            print("ERROR: Failed to stitch panorama:", status)
         
