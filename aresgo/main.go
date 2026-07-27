@@ -47,8 +47,25 @@ func main() {
 		ticker := time.NewTicker(16 * time.Millisecond)
 		defer ticker.Stop()
 
-		conn1, _ := net.Dial("udp", "192.168.1.31:5999")
+		jetsonAddr := "192.168.1.31:5999"
+		conn1, err := net.Dial("udp", jetsonAddr)
+		if err != nil {
+			// Previously this error was discarded, and conn1 (nil on failure)
+			// would then panic the whole process on the first conn1.Write call
+			// below. Logging + bailing out here is both safer and gives us
+			// visibility we didn't have before.
+			log.Printf("udp-send: failed to dial %s: %v", jetsonAddr, err)
+			return
+		}
 		defer conn1.Close()
+		// LocalAddr() reveals which network interface the OS actually chose to
+		// send from - if this isn't the Rocket Prism's address range, packets
+		// are going out the wrong link (e.g. WiFi) and will never reach the Jetson.
+		log.Printf("udp-send: sending drive commands to %s from local %s", jetsonAddr, conn1.LocalAddr())
+
+		sentCount := 0
+		errorCount := 0
+		lastReport := time.Now()
 
 		for range ticker.C {
 			current := controlState.Get()
@@ -61,8 +78,20 @@ func main() {
 			}
 
 			payload, _ := json.Marshal(current)
-			conn1.Write(payload)
+			if _, werr := conn1.Write(payload); werr != nil {
+				errorCount++
+			} else {
+				sentCount++
+			}
 
+			// Periodic summary instead of logging every ~16ms tick.
+			if time.Since(lastReport) >= 5*time.Second {
+				log.Printf("udp-send: %d packet(s) sent, %d write error(s) in the last ~5s (target %s, local %s)",
+					sentCount, errorCount, jetsonAddr, conn1.LocalAddr())
+				sentCount = 0
+				errorCount = 0
+				lastReport = time.Now()
+			}
 		}
 	}()
 

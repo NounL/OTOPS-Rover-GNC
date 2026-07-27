@@ -17,11 +17,12 @@ import signal
 # adapter wired to the SEW EtherCAT chain. Find it with `ip link show`
 # then set it here.
 # ------------------------------------------------------------------
-ADAPTER = "CHANGE_ME_TO_LINUX_INTERFACE_NAME"
+ADAPTER = "enx00249b8d4d1a"
 
 UDP_HOST = "0.0.0.0"
 UDP_PORT = 5999
 COMMAND_TIMEOUT_S = 0.4  # no valid packet within this window -> motors forced to 0
+HEARTBEAT_INTERVAL_S = 10.0  # while a diagnostic problem persists, re-announce it at this cadence
 
 
 master = pysoem.Master()
@@ -38,10 +39,35 @@ motor_rpm = [0, 0, 0, 0]
 motor_rpm_lock = threading.Lock()
 last_command_time = 0.0
 
+# ------------------------------------------------------------------
+# Diagnostics-only state, read/written by diagnostics_thread() below.
+# None of this feeds back into motor control - it exists purely so an
+# operator can tell *why* the rover isn't moving:
+#   last_packet_seen_time  - set on ANY UDP datagram, valid or not
+#                             (distinguishes "nothing is arriving" from
+#                             "stuff is arriving but rejected")
+#   udp_packet_count        - total datagrams received
+#   udp_malformed_count     - datagrams that failed to parse as a
+#                             ControlState packet
+#   last_wkc                - most recent actual EtherCAT working
+#                             counter, compared against master.expected_wkc
+#                             to catch bus-level communication problems
+# ------------------------------------------------------------------
+last_packet_seen_time = 0.0
+udp_packet_count = 0
+udp_malformed_count = 0
+last_wkc = 0
+
+# Set once udp_listener_thread successfully binds its socket. Lets main()
+# tell the difference between "the listener is genuinely up" and "the thread
+# died on startup" instead of unconditionally printing a ready message that
+# was true before but may not be anymore (see the Address-already-in-use bug).
+udp_bound_event = threading.Event()
+
 
 #creates a thread to send and receive process data continuously at a fixed interval
 def processdata_thread():
-    global running
+    global running, last_wkc
 
     while running:
 
@@ -61,7 +87,8 @@ def processdata_thread():
             )
 
         master.send_processdata()
-        master.receive_processdata(10000)
+        # Recorded for diagnostics_thread() to compare against master.expected_wkc.
+        last_wkc = master.receive_processdata(10000)
 
         time.sleep(0.005)
 
@@ -118,12 +145,29 @@ def make_stop():
 # applies "drive" to the motors, and ignores arm (those
 # fields are for the Mega's steppers, not the SEW EtherCAT drives).
 def udp_listener_thread():
-    global running, last_command_time
+    global running, last_command_time, last_packet_seen_time, udp_packet_count, udp_malformed_count
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_HOST, UDP_PORT))
+    # Lets this bind succeed promptly after a previous instance of this
+    # script exits, instead of occasionally colliding with a socket still
+    # winding down. Does NOT let two live processes both receive traffic -
+    # it will not mask another process actively holding this port right now.
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((UDP_HOST, UDP_PORT))
+    except OSError as bind_err:
+        # This used to be an unhandled exception: it killed this thread only,
+        # while the rest of the script (EtherCAT, diagnostics, the main loop)
+        # kept running and printed a "ready" message that was no longer true.
+        # Fail loudly and shut the whole script down instead of pretending
+        # to be operational with a dead command listener.
+        print(f"[udp] FATAL: could not bind {UDP_HOST}:{UDP_PORT}: {bind_err}")
+        print(f"[udp] something else already has this port. Find it with: sudo ss -ulpn | grep {UDP_PORT}")
+        running = False
+        return
     sock.settimeout(0.5)  # lets the loop notice `running` going False and exit
 
+    udp_bound_event.set()
     print(f"[udp] listening on {UDP_HOST}:{UDP_PORT}")
 
     while running:
@@ -134,6 +178,12 @@ def udp_listener_thread():
         except OSError:
             break
 
+        # Recorded on every datagram, valid or not - this is what tells
+        # diagnostics_thread() the difference between "nothing is reaching
+        # this socket at all" and "packets are arriving but being rejected".
+        last_packet_seen_time = time.time()
+        udp_packet_count += 1
+
         try:
             packet = json.loads(data.decode("utf-8"))
             drive = packet["drive"]
@@ -141,6 +191,7 @@ def udp_listener_thread():
             angular_velocity = float(drive["angular_velocity"])
             speed_scale = float(packet["speed_scale"])
         except (ValueError, KeyError, TypeError, UnicodeDecodeError):
+            udp_malformed_count += 1
             # Malformed/partial packet - drop it and keep listening.
             continue
 
@@ -160,16 +211,128 @@ def udp_listener_thread():
         right = max(-MAX_RPM, min(MAX_RPM, right))
 
         with motor_rpm_lock:
-            # Left/right grouping kept as-is from the old keyboard controls:
-            # motors 0 & 2 = left side, motors 1 & 3 = right side.
-            motor_rpm[0] = left
-            motor_rpm[2] = left
+            # Physical side confirmed on real hardware: motors 0 & 1 = right
+            # side, motors 2 & 3 = left side (NOT the 0&2 / 1&3 grouping
+            # inherited from the old keyboard controls - that grouping was
+            # wrong and would have mixed up left/right target speeds during
+            # a turn, even though it looked fine driving straight since
+            # left == right whenever angular_velocity is 0).
+            # Sign per motor confirmed empirically by driving the rover and
+            # observing which wheels moved backwards - motors 0 and 2 need
+            # their commanded RPM negated to spin the correct physical
+            # direction, motors 1 and 3 do not.
+            motor_rpm[0] = -right
             motor_rpm[1] = right
-            motor_rpm[3] = right
+            motor_rpm[2] = -left
+            motor_rpm[3] = left
             last_command_time = time.time()
 
     sock.close()
     print("[udp] listener stopped")
+
+
+# ------------------------------------------------------------------
+# Diagnostics thread. Read-only with respect to motor control - it never
+# touches motor_rpm or master.slaves[i].output, it only reads state written
+# by the other two threads and prints operator-facing warnings that explain
+# *why* the rover isn't responding. Distinguishes three distinct failure
+# points along the pipeline, checked every 0.5s and reported on change:
+#   1. No UDP traffic is reaching this socket at all (network problem -
+#      wrong IP/port, firewall, sender not running).
+#   2. UDP traffic is arriving but failing to parse into a valid drive
+#      command (payload shape/JSON key mismatch).
+#   3. Valid drive commands are being applied to motor_rpm, but they
+#      aren't making it to the physical motors (EtherCAT working counter
+#      degraded, or a drive reporting fault/not-ready/STO-not-ok while
+#      being commanded to move).
+# ------------------------------------------------------------------
+def diagnostics_thread():
+    global running
+
+    udp_arriving = None       # None = not yet evaluated (startup grace period)
+    udp_parsing = None
+    motors_responding = None
+
+    # Last time each category printed anything, used to re-announce a
+    # persisting problem every HEARTBEAT_INTERVAL_S instead of going silent
+    # forever after the first warning (last_*_time == 0.0 at startup means
+    # "never happened yet", not "0 seconds ago" - handled explicitly below).
+    last_arriving_print = 0.0
+    last_parsing_print = 0.0
+    last_motors_print = 0.0
+
+    while running:
+        time.sleep(0.5)
+
+        now = time.time()
+
+        # ---- 1. Is any UDP traffic reaching the socket at all? ----
+        arriving_now = last_packet_seen_time > 0 and (now - last_packet_seen_time) <= COMMAND_TIMEOUT_S
+        if arriving_now != udp_arriving or (not arriving_now and now - last_arriving_print >= HEARTBEAT_INTERVAL_S):
+            if arriving_now:
+                print(f"[diag] UDP traffic detected on {UDP_HOST}:{UDP_PORT} "
+                      f"({udp_packet_count} packet(s) seen so far)")
+            else:
+                since_desc = f"{now - last_packet_seen_time:.1f}s ago" if last_packet_seen_time > 0 else "since startup"
+                print(f"[diag] WARNING: no UDP packets of any kind received ({since_desc}) "
+                      f"on {UDP_HOST}:{UDP_PORT}. Check the sender is running and can reach "
+                      f"this host/port (firewall, wrong IP, wrong port).")
+            udp_arriving = arriving_now
+            last_arriving_print = now
+
+        # ---- 2. Is that traffic parsing into valid drive commands? ----
+        if arriving_now:
+            parsing_now = last_command_time > 0 and (now - last_command_time) <= COMMAND_TIMEOUT_S
+            if parsing_now != udp_parsing or (not parsing_now and now - last_parsing_print >= HEARTBEAT_INTERVAL_S):
+                if parsing_now:
+                    print("[diag] UDP packets are parsing into valid drive commands")
+                else:
+                    print(f"[diag] WARNING: receiving UDP packets but none have parsed "
+                          f"into a valid drive command recently "
+                          f"({udp_malformed_count} malformed packet(s) so far this run). "
+                          f"Check the sender's JSON matches the expected "
+                          "{'drive': {'linear_velocity', 'angular_velocity'}, 'speed_scale'} shape.")
+                udp_parsing = parsing_now
+                last_parsing_print = now
+        else:
+            udp_parsing = None  # re-evaluate once traffic resumes
+
+        # ---- 3. Are valid commands actually reaching the physical motors? ----
+        wkc_ok = last_wkc >= master.expected_wkc
+        with motor_rpm_lock:
+            commanded = list(motor_rpm)
+
+        slave_problems = []
+        for i, s in enumerate(master.slaves):
+            try:
+                pi1 = struct.unpack_from("<H", bytes(s.input), 0)[0]
+            except Exception:
+                continue
+            ready = bool(pi1 & (1 << 0))
+            output_enabled = bool(pi1 & (1 << 1))
+            fault = bool(pi1 & (1 << 4))
+            sto_ok = bool(pi1 & (1 << 8))
+            commanding_motion = abs(commanded[i]) > 0
+            if fault or (commanding_motion and not (ready and output_enabled and sto_ok)):
+                slave_problems.append(
+                    f"motor {i} (commanded {commanded[i]:.0f} RPM): "
+                    f"ready={ready} output_enabled={output_enabled} fault={fault} sto_ok={sto_ok}"
+                )
+
+        responding_now = wkc_ok and not slave_problems
+        if responding_now != motors_responding or (not responding_now and now - last_motors_print >= HEARTBEAT_INTERVAL_S):
+            if responding_now:
+                print("[diag] EtherCAT link to motors OK - WKC nominal, all commanded drives ready")
+            else:
+                if not wkc_ok:
+                    print(f"[diag] WARNING: EtherCAT working counter degraded "
+                          f"(actual={last_wkc}, expected={master.expected_wkc}) - "
+                          f"process data may not be reaching all slaves every cycle.")
+                for line in slave_problems:
+                    print(f"[diag] WARNING: {line} - this drive will not move even "
+                          f"though a command is being sent to it.")
+            motors_responding = responding_now
+            last_motors_print = now
 
 
 def handle_shutdown_signal(signum, frame):
@@ -317,9 +480,20 @@ t.start()
 udp_thread = threading.Thread(target=udp_listener_thread, daemon=True)
 udp_thread.start()
 
+# start the diagnostics thread (UDP reception + motor forwarding health checks).
+diag_thread = threading.Thread(target=diagnostics_thread, daemon=True)
+diag_thread.start()
+
 time.sleep(0.5)
 
-print(f"[main] ready - listening for drive commands on udp {UDP_HOST}:{UDP_PORT}")
+# Only claim to be ready if udp_listener_thread actually got its socket bound -
+# previously this printed unconditionally even if that thread had already
+# died on startup (e.g. OSError: Address already in use).
+if udp_bound_event.wait(timeout=2.0):
+    print(f"[main] ready - listening for drive commands on udp {UDP_HOST}:{UDP_PORT}")
+else:
+    print("[main] WARNING: UDP command listener did not start - motors will "
+          "never receive drive commands. Check the [udp] FATAL message above.")
 
 try:
     while running:
@@ -338,6 +512,7 @@ finally:
     running = False
     t.join(timeout=1)
     udp_thread.join(timeout=1)
+    diag_thread.join(timeout=1)
 
     master.state = pysoem.INIT_STATE
     master.write_state()
