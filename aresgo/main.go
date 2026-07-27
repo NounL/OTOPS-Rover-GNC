@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -46,8 +47,8 @@ func main() {
 		ticker := time.NewTicker(16 * time.Millisecond)
 		defer ticker.Stop()
 
-		//conn1, _ := net.Dial("udp", "192.168.1.20:5999")
-		//defer conn1.Close()
+		conn1, _ := net.Dial("udp", "192.168.1.31:5999")
+		defer conn1.Close()
 
 		for range ticker.C {
 			current := controlState.Get()
@@ -59,10 +60,9 @@ func main() {
 				}
 			}
 
-			/*
-				payload, _ := json.Marshal(current)
-				conn1.Write(payload)
-			*/
+			payload, _ := json.Marshal(current)
+			conn1.Write(payload)
+
 		}
 	}()
 

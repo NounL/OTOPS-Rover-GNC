@@ -8,6 +8,8 @@
 //   X            cycle the joint assigned to the left stick
 //   B            cycle the joint assigned to the right stick
 //   RB / LB      increment / decrement the global speed scale
+//   L3 / R3      (stick click) zero out that stick's axis/axes; stays zeroed
+//                until the stick is physically moved again
 import { useState, useEffect } from "react";
 import { type ControlState, type ArmStruct, type Mode } from "../types/control";
 
@@ -17,6 +19,7 @@ const SPEED_SCALE_MIN = 0.1;
 const SPEED_SCALE_MAX = 1.0;
 const SPEED_SCALE_STEP = 0.1;
 const SPEED_SCALE_DEFAULT = 0.5;
+const STICK_MOVEMENT_THRESHOLD = 0.15; // how far a latched stick must move to clear the latch
 
 const ZERO_ARM: ArmStruct = { base: 0, shoulder: 0, elbow: 0, wrist: 0, gripper: 0 };
 
@@ -38,6 +41,14 @@ export function useGamepad() {
         let prevRightCycleButton = false;
         let prevSpeedUpButton = false;
         let prevSpeedDownButton = false;
+        let prevLeftStickButton = false;
+        let prevRightStickButton = false;
+
+        // When latched, the corresponding stick's axis/axes are forced to 0
+        // regardless of physical position, until the stick moves back past
+        // STICK_MOVEMENT_THRESHOLD.
+        let leftStickLatched = false;
+        let rightStickLatched = false;
 
         const pollGamepadLoop = () => {
             const gamepads = navigator.getGamepads();
@@ -53,6 +64,34 @@ export function useGamepad() {
                 const buttonX = gamepad.buttons[2]?.pressed || false;
                 const bumperLeft = gamepad.buttons[4]?.pressed || false;
                 const bumperRight = gamepad.buttons[5]?.pressed || false;
+                const leftStickButton = gamepad.buttons[10]?.pressed || false;
+                const rightStickButton = gamepad.buttons[11]?.pressed || false;
+
+                if (leftStickButton && !prevLeftStickButton) {
+                    leftStickLatched = true;
+                }
+                prevLeftStickButton = leftStickButton;
+
+                if (rightStickButton && !prevRightStickButton) {
+                    rightStickLatched = true;
+                }
+                prevRightStickButton = rightStickButton;
+
+                // Clear a latch once its stick is physically moved again.
+                if (leftStickLatched && Math.abs(leftStickY) > STICK_MOVEMENT_THRESHOLD) {
+                    leftStickLatched = false;
+                }
+                if (
+                    rightStickLatched &&
+                    (Math.abs(rightStickX) > STICK_MOVEMENT_THRESHOLD ||
+                        Math.abs(rightStickY) > STICK_MOVEMENT_THRESHOLD)
+                ) {
+                    rightStickLatched = false;
+                }
+
+                const effectiveLeftStickY = leftStickLatched ? 0 : leftStickY;
+                const effectiveRightStickX = rightStickLatched ? 0 : rightStickX;
+                const effectiveRightStickY = rightStickLatched ? 0 : rightStickY;
 
                 if (buttonA && !prevModeButton) {
                     mode = mode === "DRIVE" ? "ARM" : "DRIVE";
@@ -80,14 +119,14 @@ export function useGamepad() {
                 prevSpeedDownButton = bumperLeft;
 
                 const arm: ArmStruct = { ...ZERO_ARM };
-                arm[ARM_JOINTS[leftJoint]] = -leftStickY;
-                arm[ARM_JOINTS[rightJoint]] = -rightStickY;
+                arm[ARM_JOINTS[leftJoint]] = -effectiveLeftStickY;
+                arm[ARM_JOINTS[rightJoint]] = -effectiveRightStickY;
 
                 setControlState({
                     mode,
                     speed_scale: Number(speedScale.toFixed(2)),
                     drive: mode === "DRIVE"
-                        ? { linear_velocity: -leftStickY, angular_velocity: rightStickX }
+                        ? { linear_velocity: -effectiveLeftStickY, angular_velocity: effectiveRightStickX }
                         : { linear_velocity: 0, angular_velocity: 0 },
                     arm: mode === "ARM" ? arm : { ...ZERO_ARM },
                     timestamp: Date.now(),
