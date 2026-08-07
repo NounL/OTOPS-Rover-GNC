@@ -1,3 +1,5 @@
+// Outdated - refer to OTOPScontroller.ino
+
 // Mega_Rover_Controller.ino
 // Mega 5-stepper + 5-encoder (4 ext interrupts + 1 polled) + BMP280 + MPU6050 + GPS
 // Libraries required: Adafruit_BMP280, Adafruit_Sensor
