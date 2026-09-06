@@ -1,0 +1,30 @@
+SSH Instructions
+
+ssh otops@192.168.1.31
+Rover1234
+
+Important commands:
+sudo reboot
+sudo shutdown now 
+
+Or:
+In vs code bottom left can open remote connection, choose folder user/ssh/config when prompted
+
+
+
+Think this putty thing outdated/pointless
+https://www.youtube.com/watch?v=VeOj_C6rAF4 
+PuTTy software: https://putty.org/index.html
+Install on laptop/ground station 
+Get VS Code Extension Remote - SSH, using vs code as a gui to open jetson folders and use terminal
+
+In PuTTY:
+Find ip address of jetson for HostName/ip section
+Port 22 default ssh port
+Connection Type: SSH
+Ignore security warning and click accept
+Enter username, then password for jetson
+username: otops 
+password: Rover1234
+
+

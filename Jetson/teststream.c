@@ -1,0 +1,103 @@
+// Olly Love
+// rtsp multi-camera test stream
+// One rtsp server and port, multiple mounts, each to view a different stream
+
+// How to run:
+// gcc teststream.c $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0)
+// ./a.out
+
+// To rename
+// gcc teststream.c -o teststream ...
+
+// gst-launch-1.0 rtspsrc location=rtsp://localhost:8554/front latency=0 drop-on-latency=true ! rtpjpegdepay ! queue ! jpegdec ! videoconvert ! ximagesink
+
+#include <stdio.h>
+#include <gst/gst.h>
+#include <gst/rtsp-server/rtsp-server.h>
+
+#define NUM_CAMERAS 4
+
+void gst_rtsp_server_run(int port)
+{
+    GMainLoop *loop;
+    GstRTSPServer *server;
+    GstRTSPMountPoints *mounts;
+
+    // Array of factory pointers - need a factory for each port
+    GstRTSPMediaFactory *factories[NUM_CAMERAS];
+
+    // 4 pipelines with 1000 allocated for the max length of each pipeline
+    char pipeline_descs[NUM_CAMERAS][1000];
+
+    // char *pipeline_descs[NUM_CAMERAS] = {
+    //     // To test multi-stream just copy and paste this however many times and change NUM_CAMERAS
+    //     "( videotestsrc is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
+    //     "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+    //     "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+    //     "( videotestsrc is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+    // };
+
+    // New pipeline format to allow for dynamic device names - testing it 
+    // accpets variables embedded
+    for (int i = 0; i < NUM_CAMERAS; i++){
+        if (i == 0) {
+            sprintf(
+                pipeline_descs[i],
+                "( %s is-live=true ! x264enc tune=zerolatency speed-preset=ultrafast ! h264parse ! rtph264pay name=pay0 pt=96 )",
+                "videotestsrc"
+            );
+        }
+        else {
+            // creating char array and accepts variables for dynamic strings
+            sprintf(
+                pipeline_descs[i],
+                "( %s is-live=true ! jpegenc ! jpegparse ! rtpjpegpay name=pay0 pt=26 )",
+                "videotestsrc"
+            );
+        }
+    }
+
+    gst_init(NULL, NULL);
+
+    loop = g_main_loop_new(NULL, FALSE);
+
+    server = gst_rtsp_server_new();
+    g_object_set(server, "service", g_strdup_printf("%d", port), NULL);
+
+    // Stores mount points
+    mounts = gst_rtsp_server_get_mount_points(server);
+
+    // Testing w 4 cameras, can easily add more
+    const char *mount_points[] = {"/front", "/back", "/left", "/right"};
+
+    // Building pipelines
+    for (int i = 0; i < NUM_CAMERAS; i++){
+        factories[i] = gst_rtsp_media_factory_new();
+        gst_rtsp_media_factory_set_launch(factories[i], pipeline_descs[i]);
+        gst_rtsp_media_factory_set_shared(factories[i], TRUE);
+    }
+
+    // Mounting pipelines
+    for (int i = 0; i < NUM_CAMERAS; i++){
+        gst_rtsp_mount_points_add_factory(mounts, mount_points[i], factories[i]);
+    }
+    
+    g_object_unref(mounts);
+    gst_rtsp_server_attach(server, NULL);
+
+    for (int i = 0; i < NUM_CAMERAS; i++){
+        g_print("RTSP server is running at rtsp://localhost:%d%s\n", port, mount_points[i]);
+    }
+
+    g_main_loop_run(loop);
+}
+
+int main(int argc, char const *argv[])
+{
+    // Default RTSP port
+    int port = 8554;
+
+    gst_rtsp_server_run(port);
+
+    return 0;
+}

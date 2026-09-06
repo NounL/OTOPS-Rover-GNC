@@ -1,0 +1,28 @@
+Ares Amazing Motors and Arm Checklist OTOPS 2026
+
+Groundstation:
+cd aresgo
+go run .
+
+cd aresui
+npm run dev (if error might need npm install first)
+Plug in the logitech controller once the site is running, sending controls through aresgo
+
+Jetson:
+Files in Documents
+SEW Motors:
+cd SEWmotor
+sudo python3 Mo_SEW_Ethercat.py (receiving controls from aresui through udp)
+Have service file motors.service
+systemctl status motors.service
+sudo systemctl enable motors.service
+
+sudo systemctl start motors.service
+sudo systemctl stop motors.service
+sudo systemctl disable motors.service
+
+For NEMA:
+Arduino file flashed from groundstation in OTOPScontroller
+ssh in to jetson
+sudo minicom
+sudo python3 nema_bridge.py (receives controls from ui and sends through serial to arduino) 

@@ -1,0 +1,10 @@
+Run: sudo minicom -s
+
+minicom -D /dev/ttyACM1 -b 115200
+
+Choose Serial Port Setup
+
+Set Device: /dev/ttyACM0
+
+Hardware flow : No
+

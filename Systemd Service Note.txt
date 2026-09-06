@@ -1,0 +1,47 @@
+Service script start - ignore this line
+[Unit]
+Description=Test RTSP Stream for Rover
+
+[Service]
+ExecStart=/home/ollylove/OTOPS/gstream_work/rtspstream
+Restart=always
+WorkingDirectory=/home/ollylove/OTOPS/gstream_work
+
+[Install]
+WantedBy=multi-user.target
+Service script end - ignore this line
+
+Notes on Systemd service:
+Video: https://www.youtube.com/watch?v=-aKb-k8B8xo 
+
+Change teststream to file name
+Go here in terminal: /etc/systemd/system
+sudo nano rtspstream.service
+Do the correct format
+Save, exit, check status:
+systemctl status rtspstream.service
+Enable: 
+sudo systemctl enable rtspstream.service
+
+Can run with:
+sudo systemctl start rtspstream.service
+
+Stop and disable:
+sudo systemctl stop rtspstream.service
+sudo systemctl disable rtspstream.service
+
+Below we have a service file motors.service
+systemctl status motors.service
+
+[Unit]
+Description=SEW Motors on start       
+
+[Service]
+User=root
+ExecStart=/usr/bin/python3 /home/otops/Documents/SEWmotor/Mo_SEW_Ethercat.py
+Restart=always
+WorkingDirectory=/home/otops/Documents/SEWmotor   
+
+[Install]
+WantedBy=multi-user.target
+
